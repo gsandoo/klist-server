@@ -13,3 +13,7 @@ spring:
 logging:
   level:
    '[org.hibernate.SQL]': debug
+
+weather:
+  api:
+    key: ${WEATHER_API_KEY}
