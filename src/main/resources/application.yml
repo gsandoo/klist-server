@@ -14,3 +14,6 @@ spring:
 weather:
   api:
     base-url: https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0
+
+cors:
+  allowed-origins: http://localhost:5173
