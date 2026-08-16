@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.kk.klist.domain.bucketlist.dto.request.BucketListCreateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListErrorCode;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListException;
@@ -23,6 +24,7 @@ import com.kk.klist.global.response.PageResponse;
 import com.kk.klist.global.security.auth.CustomUserDetails;
 import com.kk.klist.global.security.auth.Role;
 import com.kk.klist.global.security.jwt.JwtTokenProvider;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -56,6 +58,75 @@ class BucketListControllerTest {
 
     @MockitoBean
     private CacheManager cacheManager;
+
+    @Test
+    @DisplayName("GET /api/v1/bucket-lists/{id} 요청이 유효하면 200과 상세 정보가 반환된다")
+    void findBucketList_whenValidRequest_returns200WithDetail() throws Exception {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 21L;
+        BucketListDetailResponse response = BucketListDetailResponse.from(
+                BucketListFixture.incompleteBucketListWithIdAndMemberId(bucketListId, memberId),
+                "500m"
+        );
+        given(bucketListService.findBucketList(
+                memberId,
+                bucketListId,
+                new BigDecimal("37.5446"),
+                new BigDecimal("127.0557")
+        )).willReturn(response);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/bucket-lists/{bucketListId}", bucketListId)
+                        .with(authentication(createAuthentication(memberId)))
+                        .param("latitude", "37.5446")
+                        .param("longitude", "127.0557"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.bucketListId").value(bucketListId))
+                .andExpect(jsonPath("$.data.category").value("K_DRAMA"))
+                .andExpect(jsonPath("$.data.distance").value("500m"));
+        then(bucketListService).should(times(1)).findBucketList(
+                memberId,
+                bucketListId,
+                new BigDecimal("37.5446"),
+                new BigDecimal("127.0557")
+        );
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/bucket-lists/{id}의 버킷리스트가 없으면 404가 반환된다")
+    void findBucketList_whenNotFound_returns404() throws Exception {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 999L;
+        given(bucketListService.findBucketList(memberId, bucketListId, null, null))
+                .willThrow(new BucketListException(BucketListErrorCode.BUCKET_LIST_NOT_FOUND));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/bucket-lists/{bucketListId}", bucketListId)
+                        .with(authentication(createAuthentication(memberId))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUCKET_LIST_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/bucket-lists/{id}가 다른 사용자의 버킷리스트이면 403이 반환된다")
+    void findBucketList_whenOwnedByOtherMember_returns403() throws Exception {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 21L;
+        given(bucketListService.findBucketList(memberId, bucketListId, null, null))
+                .willThrow(new BucketListException(BucketListErrorCode.ACCESS_DENIED));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/bucket-lists/{bucketListId}", bucketListId)
+                        .with(authentication(createAuthentication(memberId))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+    }
 
     @Test
     @DisplayName("GET /api/v1/bucket-lists 요청이 유효하면 200과 내 목록이 반환된다")

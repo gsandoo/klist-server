@@ -14,6 +14,7 @@ import com.kk.klist.domain.bucketlist.domain.exception.BucketListErrorCode;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListException;
 import com.kk.klist.domain.bucketlist.dto.request.BucketListCreateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
 import com.kk.klist.domain.bucketlist.fixture.BucketListDtoFixture;
 import com.kk.klist.domain.bucketlist.fixture.BucketListFixture;
@@ -21,6 +22,7 @@ import com.kk.klist.domain.bucketlist.repository.BucketListRepository;
 import com.kk.klist.domain.bucketlist.repository.BucketListSearchCondition;
 import com.kk.klist.domain.bucketlist.repository.CategoryRepository;
 import com.kk.klist.global.response.PageResponse;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +46,75 @@ class BucketListServiceTest {
 
     @Mock
     private CategoryRepository categoryRepository;
+
+    @Test
+    @DisplayName("본인의 버킷리스트 상세 정보를 조회하면 상세 응답이 반환된다")
+    void findBucketList_whenOwnedBucketListExists_returnsDetail() {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 21L;
+        BucketList bucketList = BucketListFixture.incompleteBucketListWithIdAndMemberId(bucketListId, memberId);
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.of(bucketList));
+
+        // when
+        BucketListDetailResponse response = bucketListService.findBucketList(
+                memberId,
+                bucketListId,
+                new BigDecimal("37.5826000"),
+                new BigDecimal("126.9830000")
+        );
+
+        // then
+        assertThat(response.bucketListId()).isEqualTo(bucketListId);
+        assertThat(response.category()).isEqualTo("K_DRAMA");
+        assertThat(response.distance()).isEqualTo("0m");
+        then(bucketListRepository).should(times(1)).findById(bucketListId);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 버킷리스트 상세 정보를 조회하면 BucketListNotFound 예외가 발생된다")
+    void findBucketList_whenNotFound_throwsBucketListNotFoundException() {
+        // given
+        Long bucketListId = 999L;
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> bucketListService.findBucketList(1L, bucketListId, null, null))
+                .isInstanceOf(BucketListException.class)
+                .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
+                        .isEqualTo(BucketListErrorCode.BUCKET_LIST_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 버킷리스트 상세 정보를 조회하면 AccessDenied 예외가 발생된다")
+    void findBucketList_whenOwnedByOtherMember_throwsAccessDeniedException() {
+        // given
+        Long bucketListId = 21L;
+        BucketList bucketList = BucketListFixture.incompleteBucketListWithIdAndMemberId(bucketListId, 2L);
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.of(bucketList));
+
+        // when & then
+        assertThatThrownBy(() -> bucketListService.findBucketList(1L, bucketListId, null, null))
+                .isInstanceOf(BucketListException.class)
+                .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
+                        .isEqualTo(BucketListErrorCode.ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("현재 위치의 위도만 전달하면 IncompleteCoordinates 예외가 발생된다")
+    void findBucketList_whenOnlyLatitudeProvided_throwsIncompleteCoordinatesException() {
+        // when & then
+        assertThatThrownBy(() -> bucketListService.findBucketList(
+                1L,
+                21L,
+                new BigDecimal("37.5826000"),
+                null
+        ))
+                .isInstanceOf(BucketListException.class)
+                .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
+                        .isEqualTo(BucketListErrorCode.INCOMPLETE_COORDINATES));
+        then(bucketListRepository).should(never()).findById(any());
+    }
 
     @Test
     @DisplayName("전체 카테고리로 내 버킷리스트를 조회하면 페이징된 목록이 반환된다")
