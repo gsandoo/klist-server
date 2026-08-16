@@ -10,6 +10,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.support.PageableExecutionUtils;
@@ -25,6 +26,11 @@ public class BucketListRepositoryImpl implements BucketListRepository {
     @Override
     public BucketList save(BucketList bucketList) {
         return bucketListJpaRepository.save(bucketList);
+    }
+
+    @Override
+    public Optional<BucketList> findById(Long bucketListId) {
+        return bucketListJpaRepository.findById(bucketListId);
     }
 
     @Override

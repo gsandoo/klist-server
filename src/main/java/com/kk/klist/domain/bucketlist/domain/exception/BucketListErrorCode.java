@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum BucketListErrorCode implements ErrorCode {
 
+    BUCKET_LIST_NOT_FOUND(HttpStatus.NOT_FOUND, "BUCKET_LIST_NOT_FOUND", "버킷리스트를 찾을 수 없습니다."),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "접근 권한이 없습니다."),
     CATEGORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "BUCKET_LIST_CATEGORY_NOT_FOUND", "지원하지 않는 카테고리입니다."),
     INCOMPLETE_COORDINATES(HttpStatus.BAD_REQUEST, "INCOMPLETE_COORDINATES", "위도와 경도를 모두 입력해주세요."),
     INVALID_COORDINATES(HttpStatus.BAD_REQUEST, "INVALID_COORDINATES", "위도 또는 경도의 범위가 올바르지 않습니다.");

@@ -2,12 +2,14 @@ package com.kk.klist.domain.bucketlist.controller;
 
 import com.kk.klist.domain.bucketlist.dto.request.BucketListCreateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
 import com.kk.klist.domain.bucketlist.service.BucketListService;
 import com.kk.klist.global.response.ApiResponse;
 import com.kk.klist.global.response.PageResponse;
 import com.kk.klist.global.security.auth.LoginUser;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,6 +31,18 @@ public class BucketListController {
     private static final int DEFAULT_PAGE_SIZE = 10;
 
     private final BucketListService bucketListService;
+
+    @GetMapping("/{bucketListId}")
+    public ResponseEntity<ApiResponse<BucketListDetailResponse>> findBucketList(
+            @LoginUser Long userId,
+            @PathVariable Long bucketListId,
+            @RequestParam(required = false) BigDecimal latitude,
+            @RequestParam(required = false) BigDecimal longitude
+    ) {
+        BucketListDetailResponse response =
+                bucketListService.findBucketList(userId, bucketListId, latitude, longitude);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<BucketListSummaryResponse>>> findBucketLists(
