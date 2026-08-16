@@ -58,4 +58,41 @@ class BucketListTest {
                 .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
                         .isEqualTo(BucketListErrorCode.INVALID_COORDINATES));
     }
+
+    @Test
+    @DisplayName("유효한 정보로 수정하면 버킷리스트 정보가 변경된다")
+    void update_whenValidInput_updatesBucketList() {
+        // given
+        BucketList bucketList = BucketListFixture.incompleteBucketList();
+        Category category = Category.create("K_BEAUTY", "K-beauty");
+
+        // when
+        bucketList.update(
+                category, "Updated bucket list", "Updated description.",
+                "Seongsu-dong", "Seongsu-dong, Seoul",
+                new BigDecimal("37.5446000"), new BigDecimal("127.0557000"),
+                "https://example.com/images/updated.jpg"
+        );
+
+        // then
+        assertThat(bucketList.getTitle()).isEqualTo("Updated bucket list");
+        assertThat(bucketList.getCategory()).isEqualTo(category);
+        assertThat(bucketList.getPlaceName()).isEqualTo("Seongsu-dong");
+    }
+
+    @Test
+    @DisplayName("위도만 전달하여 수정하면 IncompleteCoordinates 예외가 발생된다")
+    void update_whenOnlyLatitudeProvided_throwsIncompleteCoordinatesException() {
+        // given
+        BucketList bucketList = BucketListFixture.incompleteBucketList();
+
+        // when & then
+        assertThatThrownBy(() -> bucketList.update(
+                Category.create("K_BEAUTY", "K-beauty"), "Updated", null,
+                null, null, new BigDecimal("37.5446000"), null, null
+        ))
+                .isInstanceOf(BucketListException.class)
+                .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
+                        .isEqualTo(BucketListErrorCode.INCOMPLETE_COORDINATES));
+    }
 }

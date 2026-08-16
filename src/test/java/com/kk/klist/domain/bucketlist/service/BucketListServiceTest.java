@@ -13,6 +13,7 @@ import com.kk.klist.domain.bucketlist.domain.entity.Category;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListErrorCode;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListException;
 import com.kk.klist.domain.bucketlist.dto.request.BucketListCreateRequest;
+import com.kk.klist.domain.bucketlist.dto.request.BucketListUpdateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
@@ -46,6 +47,127 @@ class BucketListServiceTest {
 
     @Mock
     private CategoryRepository categoryRepository;
+
+    @Test
+    @DisplayName("본인의 버킷리스트를 수정하면 요청 정보가 반영된다")
+    void updateBucketList_whenOwnedBucketListExists_updatesBucketList() {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 21L;
+        BucketList bucketList = BucketListFixture.incompleteBucketListWithIdAndMemberId(bucketListId, memberId);
+        BucketListUpdateRequest request = BucketListDtoFixture.updateRequest();
+        Category category = Category.create("K_BEAUTY", "K-beauty");
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.of(bucketList));
+        given(categoryRepository.findByCode(request.category())).willReturn(Optional.of(category));
+
+        // when
+        bucketListService.updateBucketList(memberId, bucketListId, request);
+
+        // then
+        assertThat(bucketList.getTitle()).isEqualTo(request.title());
+        assertThat(bucketList.getCategory()).isEqualTo(category);
+        assertThat(bucketList.getLatitude()).isEqualByComparingTo(request.latitude());
+        then(bucketListRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 버킷리스트를 수정하면 BucketListNotFound 예외가 발생된다")
+    void updateBucketList_whenNotFound_throwsBucketListNotFoundException() {
+        // given
+        Long bucketListId = 999L;
+        BucketListUpdateRequest request = BucketListDtoFixture.updateRequest();
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> bucketListService.updateBucketList(1L, bucketListId, request))
+                .isInstanceOf(BucketListException.class)
+                .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
+                        .isEqualTo(BucketListErrorCode.BUCKET_LIST_NOT_FOUND));
+        then(categoryRepository).should(never()).findByCode(any());
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 버킷리스트를 수정하면 AccessDenied 예외가 발생된다")
+    void updateBucketList_whenOwnedByOtherMember_throwsAccessDeniedException() {
+        // given
+        Long bucketListId = 21L;
+        BucketList bucketList = BucketListFixture.incompleteBucketListWithIdAndMemberId(bucketListId, 2L);
+        BucketListUpdateRequest request = BucketListDtoFixture.updateRequest();
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.of(bucketList));
+
+        // when & then
+        assertThatThrownBy(() -> bucketListService.updateBucketList(1L, bucketListId, request))
+                .isInstanceOf(BucketListException.class)
+                .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
+                        .isEqualTo(BucketListErrorCode.ACCESS_DENIED));
+        then(categoryRepository).should(never()).findByCode(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 카테고리로 수정하면 CategoryNotFound 예외가 발생된다")
+    void updateBucketList_whenCategoryNotFound_throwsCategoryNotFoundException() {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 21L;
+        BucketList bucketList = BucketListFixture.incompleteBucketListWithIdAndMemberId(bucketListId, memberId);
+        BucketListUpdateRequest request = BucketListDtoFixture.updateRequest();
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.of(bucketList));
+        given(categoryRepository.findByCode(request.category())).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> bucketListService.updateBucketList(memberId, bucketListId, request))
+                .isInstanceOf(BucketListException.class)
+                .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
+                        .isEqualTo(BucketListErrorCode.CATEGORY_NOT_FOUND));
+        assertThat(bucketList.getTitle()).isNotEqualTo(request.title());
+    }
+
+    @Test
+    @DisplayName("본인의 버킷리스트를 삭제하면 Repository 삭제가 호출된다")
+    void deleteBucketList_whenOwnedBucketListExists_deletesBucketList() {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 21L;
+        BucketList bucketList = BucketListFixture.incompleteBucketListWithIdAndMemberId(bucketListId, memberId);
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.of(bucketList));
+
+        // when
+        bucketListService.deleteBucketList(memberId, bucketListId);
+
+        // then
+        then(bucketListRepository).should(times(1)).delete(bucketList);
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 버킷리스트를 삭제하면 AccessDenied 예외가 발생된다")
+    void deleteBucketList_whenOwnedByOtherMember_throwsAccessDeniedException() {
+        // given
+        Long bucketListId = 21L;
+        BucketList bucketList = BucketListFixture.incompleteBucketListWithIdAndMemberId(bucketListId, 2L);
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.of(bucketList));
+
+        // when & then
+        assertThatThrownBy(() -> bucketListService.deleteBucketList(1L, bucketListId))
+                .isInstanceOf(BucketListException.class)
+                .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
+                        .isEqualTo(BucketListErrorCode.ACCESS_DENIED));
+        then(bucketListRepository).should(never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 버킷리스트를 삭제하면 BucketListNotFound 예외가 발생된다")
+    void deleteBucketList_whenNotFound_throwsBucketListNotFoundException() {
+        // given
+        Long bucketListId = 999L;
+        given(bucketListRepository.findById(bucketListId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> bucketListService.deleteBucketList(1L, bucketListId))
+                .isInstanceOf(BucketListException.class)
+                .satisfies(error -> assertThat(((BucketListException) error).getErrorCode())
+                        .isEqualTo(BucketListErrorCode.BUCKET_LIST_NOT_FOUND));
+        then(bucketListRepository).should(never()).delete(any());
+    }
 
     @Test
     @DisplayName("본인의 버킷리스트 상세 정보를 조회하면 상세 응답이 반환된다")

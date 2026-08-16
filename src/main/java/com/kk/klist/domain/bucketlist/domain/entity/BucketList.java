@@ -99,6 +99,19 @@ public class BucketList extends BaseTimeEntity {
                 .build();
     }
 
+    public void update(Category category, String title, String description, String placeName,
+            String address, BigDecimal latitude, BigDecimal longitude, String imageUrl) {
+        validateCoordinates(latitude, longitude);
+        this.category = category;
+        this.title = title;
+        this.description = description;
+        this.placeName = placeName;
+        this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.imageUrl = imageUrl;
+    }
+
     private void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
         if ((latitude == null) != (longitude == null)) {
             throw new BucketListException(BucketListErrorCode.INCOMPLETE_COORDINATES);

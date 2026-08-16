@@ -5,6 +5,7 @@ import com.kk.klist.domain.bucketlist.domain.entity.Category;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListErrorCode;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListException;
 import com.kk.klist.domain.bucketlist.dto.request.BucketListCreateRequest;
+import com.kk.klist.domain.bucketlist.dto.request.BucketListUpdateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
@@ -68,13 +69,41 @@ public class BucketListService {
     public BucketListDetailResponse findBucketList(Long memberId, Long bucketListId,
             BigDecimal latitude, BigDecimal longitude) {
         validateCoordinates(latitude, longitude);
+        BucketList bucketList = findOwnedBucketList(memberId, bucketListId);
+
+        return BucketListDetailResponse.from(bucketList, calculateDistance(bucketList, latitude, longitude));
+    }
+
+    @Transactional
+    public void updateBucketList(Long memberId, Long bucketListId, BucketListUpdateRequest request) {
+        BucketList bucketList = findOwnedBucketList(memberId, bucketListId);
+        Category category = categoryRepository.findByCode(request.category())
+                .orElseThrow(() -> new BucketListException(BucketListErrorCode.CATEGORY_NOT_FOUND));
+        bucketList.update(
+                category,
+                request.title(),
+                request.description(),
+                request.placeName(),
+                request.address(),
+                request.latitude(),
+                request.longitude(),
+                request.imageUrl()
+        );
+    }
+
+    @Transactional
+    public void deleteBucketList(Long memberId, Long bucketListId) {
+        BucketList bucketList = findOwnedBucketList(memberId, bucketListId);
+        bucketListRepository.delete(bucketList);
+    }
+
+    private BucketList findOwnedBucketList(Long memberId, Long bucketListId) {
         BucketList bucketList = bucketListRepository.findById(bucketListId)
                 .orElseThrow(() -> new BucketListException(BucketListErrorCode.BUCKET_LIST_NOT_FOUND));
         if (!bucketList.getMemberId().equals(memberId)) {
             throw new BucketListException(BucketListErrorCode.ACCESS_DENIED);
         }
-
-        return BucketListDetailResponse.from(bucketList, calculateDistance(bucketList, latitude, longitude));
+        return bucketList;
     }
 
     private String resolveCategoryCode(String category) {

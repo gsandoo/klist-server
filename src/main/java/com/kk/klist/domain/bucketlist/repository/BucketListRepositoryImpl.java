@@ -34,6 +34,11 @@ public class BucketListRepositoryImpl implements BucketListRepository {
     }
 
     @Override
+    public void delete(BucketList bucketList) {
+        bucketListJpaRepository.delete(bucketList);
+    }
+
+    @Override
     public Page<BucketList> searchBucketList(BucketListSearchCondition condition) {
         CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
         CriteriaQuery<BucketList> contentQuery = criteriaBuilder.createQuery(BucketList.class);
