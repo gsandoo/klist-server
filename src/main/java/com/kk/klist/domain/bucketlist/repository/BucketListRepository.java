@@ -10,5 +10,7 @@ public interface BucketListRepository {
 
     Optional<BucketList> findById(Long bucketListId);
 
+    void delete(BucketList bucketList);
+
     Page<BucketList> searchBucketList(BucketListSearchCondition condition);
 }
