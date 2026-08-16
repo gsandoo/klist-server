@@ -1,7 +1,18 @@
 package com.kk.klist.domain.bucketlist.repository;
 
 import com.kk.klist.domain.bucketlist.domain.entity.BucketList;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -9,9 +20,61 @@ import org.springframework.stereotype.Repository;
 public class BucketListRepositoryImpl implements BucketListRepository {
 
     private final BucketListJpaRepository bucketListJpaRepository;
+    private final EntityManager entityManager;
 
     @Override
     public BucketList save(BucketList bucketList) {
         return bucketListJpaRepository.save(bucketList);
+    }
+
+    @Override
+    public Page<BucketList> searchBucketList(BucketListSearchCondition condition) {
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<BucketList> contentQuery = criteriaBuilder.createQuery(BucketList.class);
+        Root<BucketList> bucketList = contentQuery.from(BucketList.class);
+        bucketList.fetch("category", JoinType.INNER);
+
+        contentQuery
+                .select(bucketList)
+                .where(createPredicates(criteriaBuilder, bucketList, condition))
+                .orderBy(
+                        criteriaBuilder.desc(bucketList.get("createdAt")),
+                        criteriaBuilder.desc(bucketList.get("id"))
+                );
+
+        TypedQuery<BucketList> query = entityManager.createQuery(contentQuery);
+        query.setFirstResult((int) condition.pageable().getOffset());
+        query.setMaxResults(condition.pageable().getPageSize());
+        List<BucketList> content = query.getResultList();
+
+        return PageableExecutionUtils.getPage(
+                content,
+                condition.pageable(),
+                () -> countBucketLists(criteriaBuilder, condition)
+        );
+    }
+
+    private long countBucketLists(CriteriaBuilder criteriaBuilder, BucketListSearchCondition condition) {
+        CriteriaQuery<Long> countQuery = criteriaBuilder.createQuery(Long.class);
+        Root<BucketList> bucketList = countQuery.from(BucketList.class);
+        countQuery
+                .select(criteriaBuilder.count(bucketList))
+                .where(createPredicates(criteriaBuilder, bucketList, condition));
+        return entityManager.createQuery(countQuery).getSingleResult();
+    }
+
+    private Predicate[] createPredicates(CriteriaBuilder criteriaBuilder, Root<BucketList> bucketList,
+            BucketListSearchCondition condition) {
+        List<Predicate> predicates = new ArrayList<>();
+        predicates.add(criteriaBuilder.equal(bucketList.get("memberId"), condition.memberId()));
+
+        if (condition.categoryCode() != null) {
+            predicates.add(criteriaBuilder.equal(bucketList.get("category").get("code"), condition.categoryCode()));
+        }
+        if (condition.completed() != null) {
+            predicates.add(criteriaBuilder.equal(bucketList.get("completed"), condition.completed()));
+        }
+
+        return predicates.toArray(Predicate[]::new);
     }
 }

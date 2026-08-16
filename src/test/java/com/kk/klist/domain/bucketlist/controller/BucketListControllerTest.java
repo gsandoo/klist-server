@@ -7,23 +7,33 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.kk.klist.domain.bucketlist.dto.request.BucketListCreateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
+import com.kk.klist.domain.bucketlist.domain.exception.BucketListErrorCode;
+import com.kk.klist.domain.bucketlist.domain.exception.BucketListException;
+import com.kk.klist.domain.bucketlist.fixture.BucketListFixture;
 import com.kk.klist.domain.bucketlist.service.BucketListService;
+import com.kk.klist.global.response.PageResponse;
 import com.kk.klist.global.security.auth.CustomUserDetails;
 import com.kk.klist.global.security.auth.Role;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import com.kk.klist.global.security.jwt.JwtTokenProvider;
 import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -41,27 +51,66 @@ class BucketListControllerTest {
     @MockitoBean
     private JpaMetamodelMappingContext jpaMappingContext;
 
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private CacheManager cacheManager;
+
+    @Test
+    @DisplayName("GET /api/v1/bucket-lists 요청이 유효하면 200과 내 목록이 반환된다")
+    void findBucketLists_whenValidRequest_returns200WithPage() throws Exception {
+        // given
+        Long memberId = 1L;
+        BucketListSummaryResponse summary = BucketListSummaryResponse.from(
+                BucketListFixture.incompleteBucketListWithId(21L));
+        PageResponse<BucketListSummaryResponse> response = PageResponse.of(
+                new PageImpl<>(List.of(summary), PageRequest.of(0, 10), 1));
+        given(bucketListService.findBucketLists(eq(memberId), eq("K_DRAMA"), eq(false), any(Pageable.class)))
+                .willReturn(response);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/bucket-lists")
+                        .with(authentication(createAuthentication(memberId)))
+                        .param("category", "K_DRAMA")
+                        .param("completed", "false")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content[0].bucketListId").value(21L))
+                .andExpect(jsonPath("$.data.content[0].category").value("K_DRAMA"))
+                .andExpect(jsonPath("$.data.content[0].isCompleted").value(false))
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.currentPage").value(0));
+        then(bucketListService).should(times(1))
+                .findBucketLists(eq(memberId), eq("K_DRAMA"), eq(false), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/bucket-lists 요청의 카테고리가 유효하지 않으면 400이 반환된다")
+    void findBucketLists_whenCategoryInvalid_returns400() throws Exception {
+        // given
+        Long memberId = 1L;
+        given(bucketListService.findBucketLists(eq(memberId), eq("K_STAR"), eq(null), any(Pageable.class)))
+                .willThrow(new BucketListException(BucketListErrorCode.CATEGORY_NOT_FOUND));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/bucket-lists")
+                        .with(authentication(createAuthentication(memberId)))
+                        .param("category", "K_STAR"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUCKET_LIST_CATEGORY_NOT_FOUND"));
+    }
+
     @Test
     @DisplayName("POST /api/v1/bucket-lists 요청이 유효하면 201과 생성 정보가 반환된다")
     void createBucketList_whenValidRequest_returns201WithBody() throws Exception {
         // given
         Long memberId = 1L;
-        BucketListCreateResponse response = new BucketListCreateResponse(
-                21L,
-                "Explore a K-drama filming spot",
-                "Visit famous K-drama shooting locations.",
-                "K_DRAMA",
-                "Bukchon Hanok Village",
-                "Bukchon, Seoul",
-                new BigDecimal("37.5826000"),
-                new BigDecimal("126.9830000"),
-                "https://example.com/images/bukchon.jpg",
-                false,
-                null,
-                0L,
-                LocalDateTime.of(2026, 3, 18, 6, 51),
-                LocalDateTime.of(2026, 3, 18, 6, 51)
-        );
+        BucketListCreateResponse response = BucketListCreateResponse.from(
+                BucketListFixture.incompleteBucketListWithId(21L));
         given(bucketListService.createBucketList(eq(memberId), any(BucketListCreateRequest.class)))
                 .willReturn(response);
 
