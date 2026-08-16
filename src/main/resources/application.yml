@@ -16,6 +16,22 @@ spring:
     caffeine:
       spec: maximumSize=2000,expireAfterWrite=15m
 
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-authentication-method: client_secret_post
+            scope: profile_nickname
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
 weather:
   api:
     base-url: https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0
@@ -36,7 +52,5 @@ kakao:
 cors:
   allowed-origins: http://localhost:5173
 
-jwt:
-  secret: ${JWT_SECRET:local-dev-only-jwt-secret-key-please-override-in-prod}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
-  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
+oauth:
+  client-redirect-uri: http://localhost:5173/oauth/callback
