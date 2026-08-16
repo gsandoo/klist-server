@@ -10,13 +10,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "members")
+@Table(name = "members", uniqueConstraints = @UniqueConstraint(columnNames = {"oauthProvider", "oauthId"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends BaseTimeEntity {
@@ -32,21 +33,31 @@ public class Member extends BaseTimeEntity {
     @Column(nullable = false)
     private Role role;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String oauthProvider;
+    private OAuthProvider oauthProvider;
 
     @Column(nullable = false)
     private String oauthId;
 
+    @Column
+    private String nationality;
+
+    @Column
+    private String preferredLanguage;
+
+    @Column
+    private String profileImageUrl;
+
     @Builder
-    private Member(String nickname, String oauthProvider, String oauthId) {
+    private Member(String nickname, OAuthProvider oauthProvider, String oauthId) {
         this.nickname = nickname;
         this.role = Role.USER;
         this.oauthProvider = oauthProvider;
         this.oauthId = oauthId;
     }
 
-    public static Member create(String nickname, String oauthProvider, String oauthId) {
+    public static Member create(String nickname, OAuthProvider oauthProvider, String oauthId) {
         return Member.builder()
                 .nickname(nickname)
                 .oauthProvider(oauthProvider)
