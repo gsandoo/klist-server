@@ -35,3 +35,8 @@ kakao:
 
 cors:
   allowed-origins: http://localhost:5173
+
+jwt:
+  secret: ${JWT_SECRET:local-dev-only-jwt-secret-key-please-override-in-prod}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
