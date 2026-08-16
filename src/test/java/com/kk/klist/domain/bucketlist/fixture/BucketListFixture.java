@@ -3,10 +3,11 @@ package com.kk.klist.domain.bucketlist.fixture;
 import com.kk.klist.domain.bucketlist.domain.entity.BucketList;
 import com.kk.klist.domain.bucketlist.domain.entity.Category;
 import java.math.BigDecimal;
+import org.springframework.test.util.ReflectionTestUtils;
 
 public class BucketListFixture {
 
-    public static BucketList bucketList() {
+    public static BucketList incompleteBucketList() {
         return BucketList.create(
                 1L,
                 Category.create("K_DRAMA", "K-drama"),
@@ -18,5 +19,11 @@ public class BucketListFixture {
                 new BigDecimal("126.9830000"),
                 "https://example.com/images/bukchon.jpg"
         );
+    }
+
+    public static BucketList incompleteBucketListWithId(Long bucketListId) {
+        BucketList bucketList = incompleteBucketList();
+        ReflectionTestUtils.setField(bucketList, "id", bucketListId);
+        return bucketList;
     }
 }

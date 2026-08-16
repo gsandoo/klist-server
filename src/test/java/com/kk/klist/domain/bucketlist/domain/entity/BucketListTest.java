@@ -15,8 +15,10 @@ class BucketListTest {
     @Test
     @DisplayName("정상적인 정보로 버킷리스트를 생성하면 미완료 상태로 생성된다")
     void create_whenValidInput_createsIncompleteBucketList() {
+        // given
+
         // when
-        BucketList bucketList = BucketListFixture.bucketList();
+        BucketList bucketList = BucketListFixture.incompleteBucketList();
 
         // then
         assertThat(bucketList.getMemberId()).isEqualTo(1L);
