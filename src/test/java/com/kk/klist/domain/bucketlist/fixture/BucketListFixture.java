@@ -26,4 +26,10 @@ public class BucketListFixture {
         ReflectionTestUtils.setField(bucketList, "id", bucketListId);
         return bucketList;
     }
+
+    public static BucketList incompleteBucketListWithIdAndMemberId(Long bucketListId, Long memberId) {
+        BucketList bucketList = incompleteBucketListWithId(bucketListId);
+        ReflectionTestUtils.setField(bucketList, "memberId", memberId);
+        return bucketList;
+    }
 }

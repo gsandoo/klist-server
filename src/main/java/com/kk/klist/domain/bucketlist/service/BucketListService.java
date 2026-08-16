@@ -6,11 +6,14 @@ import com.kk.klist.domain.bucketlist.domain.exception.BucketListErrorCode;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListException;
 import com.kk.klist.domain.bucketlist.dto.request.BucketListCreateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
 import com.kk.klist.domain.bucketlist.repository.BucketListRepository;
 import com.kk.klist.domain.bucketlist.repository.BucketListSearchCondition;
 import com.kk.klist.domain.bucketlist.repository.CategoryRepository;
 import com.kk.klist.global.response.PageResponse;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BucketListService {
 
     private static final String ALL_CATEGORIES = "ALL";
+    private static final double EARTH_RADIUS_METERS = 6_371_000;
 
     private final BucketListRepository bucketListRepository;
     private final CategoryRepository categoryRepository;
@@ -61,6 +65,18 @@ public class BucketListService {
         return PageResponse.of(bucketLists);
     }
 
+    public BucketListDetailResponse findBucketList(Long memberId, Long bucketListId,
+            BigDecimal latitude, BigDecimal longitude) {
+        validateCoordinates(latitude, longitude);
+        BucketList bucketList = bucketListRepository.findById(bucketListId)
+                .orElseThrow(() -> new BucketListException(BucketListErrorCode.BUCKET_LIST_NOT_FOUND));
+        if (!bucketList.getMemberId().equals(memberId)) {
+            throw new BucketListException(BucketListErrorCode.ACCESS_DENIED);
+        }
+
+        return BucketListDetailResponse.from(bucketList, calculateDistance(bucketList, latitude, longitude));
+    }
+
     private String resolveCategoryCode(String category) {
         if (ALL_CATEGORIES.equalsIgnoreCase(category)) {
             return null;
@@ -68,5 +84,46 @@ public class BucketListService {
         return categoryRepository.findByCode(category)
                 .map(Category::getCode)
                 .orElseThrow(() -> new BucketListException(BucketListErrorCode.CATEGORY_NOT_FOUND));
+    }
+
+    private void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
+        if ((latitude == null) != (longitude == null)) {
+            throw new BucketListException(BucketListErrorCode.INCOMPLETE_COORDINATES);
+        }
+        if (latitude == null) {
+            return;
+        }
+        if (latitude.compareTo(BigDecimal.valueOf(-90)) < 0
+                || latitude.compareTo(BigDecimal.valueOf(90)) > 0
+                || longitude.compareTo(BigDecimal.valueOf(-180)) < 0
+                || longitude.compareTo(BigDecimal.valueOf(180)) > 0) {
+            throw new BucketListException(BucketListErrorCode.INVALID_COORDINATES);
+        }
+    }
+
+    private String calculateDistance(BucketList bucketList, BigDecimal latitude, BigDecimal longitude) {
+        if (latitude == null || bucketList.getLatitude() == null) {
+            return null;
+        }
+
+        double userLatitude = latitude.doubleValue();
+        double userLongitude = longitude.doubleValue();
+        double placeLatitude = bucketList.getLatitude().doubleValue();
+        double placeLongitude = bucketList.getLongitude().doubleValue();
+        double latitudeDifference = Math.toRadians(placeLatitude - userLatitude);
+        double longitudeDifference = Math.toRadians(placeLongitude - userLongitude);
+        double haversine = Math.sin(latitudeDifference / 2) * Math.sin(latitudeDifference / 2)
+                + Math.cos(Math.toRadians(userLatitude)) * Math.cos(Math.toRadians(placeLatitude))
+                * Math.sin(longitudeDifference / 2) * Math.sin(longitudeDifference / 2);
+        long distanceMeters = Math.round(EARTH_RADIUS_METERS * 2 * Math.atan2(Math.sqrt(haversine),
+                Math.sqrt(1 - haversine)));
+
+        if (distanceMeters < 1_000) {
+            return distanceMeters + "m";
+        }
+        return BigDecimal.valueOf(distanceMeters)
+                .divide(BigDecimal.valueOf(1_000), 1, RoundingMode.HALF_UP)
+                .stripTrailingZeros()
+                .toPlainString() + "km";
     }
 }
