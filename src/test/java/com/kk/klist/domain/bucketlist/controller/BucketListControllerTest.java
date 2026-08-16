@@ -7,12 +7,15 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.kk.klist.domain.bucketlist.dto.request.BucketListCreateRequest;
+import com.kk.klist.domain.bucketlist.dto.request.BucketListUpdateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
@@ -58,6 +61,57 @@ class BucketListControllerTest {
 
     @MockitoBean
     private CacheManager cacheManager;
+
+    @Test
+    @DisplayName("PATCH /api/v1/bucket-lists/{id} 요청이 유효하면 204가 반환된다")
+    void updateBucketList_whenValidRequest_returns204() throws Exception {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 21L;
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/bucket-lists/{bucketListId}", bucketListId)
+                        .with(authentication(createAuthentication(memberId)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validUpdateRequestBody()))
+                .andExpect(status().isNoContent());
+        then(bucketListService).should(times(1))
+                .updateBucketList(eq(memberId), eq(bucketListId), any(BucketListUpdateRequest.class));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/bucket-lists/{id}의 제목이 비어 있으면 400이 반환된다")
+    void updateBucketList_whenTitleBlank_returns400() throws Exception {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 21L;
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/bucket-lists/{bucketListId}", bucketListId)
+                        .with(authentication(createAuthentication(memberId)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validUpdateRequestBody().replace("Updated bucket list", "")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("G002"))
+                .andExpect(jsonPath("$.errors[0].field").value("title"));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/bucket-lists/{id} 요청이 유효하면 204가 반환된다")
+    void deleteBucketList_whenValidRequest_returns204() throws Exception {
+        // given
+        Long memberId = 1L;
+        Long bucketListId = 21L;
+
+        // when & then
+        mockMvc.perform(delete("/api/v1/bucket-lists/{bucketListId}", bucketListId)
+                        .with(authentication(createAuthentication(memberId)))
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+        then(bucketListService).should(times(1)).deleteBucketList(memberId, bucketListId);
+    }
 
     @Test
     @DisplayName("GET /api/v1/bucket-lists/{id} 요청이 유효하면 200과 상세 정보가 반환된다")
@@ -233,6 +287,21 @@ class BucketListControllerTest {
                   "latitude": 37.5826,
                   "longitude": 126.9830,
                   "imageUrl": "https://example.com/images/bukchon.jpg"
+                }
+                """;
+    }
+
+    private String validUpdateRequestBody() {
+        return """
+                {
+                  "title": "Updated bucket list",
+                  "description": "Updated description.",
+                  "category": "K_BEAUTY",
+                  "placeName": "Seongsu-dong",
+                  "address": "Seongsu-dong, Seoul",
+                  "latitude": 37.5446,
+                  "longitude": 127.0557,
+                  "imageUrl": "https://example.com/images/updated.jpg"
                 }
                 """;
     }
