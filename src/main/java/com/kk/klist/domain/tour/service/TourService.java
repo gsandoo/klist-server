@@ -4,6 +4,7 @@ import com.kk.klist.domain.tour.domain.exception.TourErrorCode;
 import com.kk.klist.domain.tour.domain.exception.TourException;
 import com.kk.klist.domain.tour.dto.response.TourDetailResponse;
 import com.kk.klist.domain.tour.dto.response.TourSpotResponse;
+import com.kk.klist.global.response.PageResponse;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
@@ -26,7 +29,6 @@ import tools.jackson.databind.JsonNode;
 @RequiredArgsConstructor
 public class TourService {
 
-    private static final int DEFAULT_NEARBY_ROWS = 50;
     private static final int DEFAULT_SEARCH_ROWS = 30;
     private static final int DEFAULT_FESTIVAL_ROWS = 50;
     private static final DateTimeFormatter EVENT_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
@@ -42,22 +44,27 @@ public class TourService {
     @Value("${tour.api.mobile-app}")
     private String mobileApp;
 
-    @Cacheable(value = "tourNearby", key = "#lat + ',' + #lng + ',' + #radius + ',' + #category + ',' + #lang")
-    public List<TourSpotResponse> findNearby(double lat, double lng, int radius, String category, String lang) {
+    @Cacheable(value = "tourNearby",
+            key = "#lat + ',' + #lng + ',' + #radius + ',' + #category + ',' + #lang + ',' + #page + ',' + #size")
+    public PageResponse<TourSpotResponse> findNearby(
+            double lat, double lng, int radius, String category, String lang, int page, int size) {
         Map<String, String> params = commonParams();
         params.put("mapX", String.valueOf(lng));
         params.put("mapY", String.valueOf(lat));
         params.put("radius", String.valueOf(radius));
         params.put("arrange", "E");
-        params.put("numOfRows", String.valueOf(DEFAULT_NEARBY_ROWS));
+        params.put("numOfRows", String.valueOf(size));
+        params.put("pageNo", String.valueOf(page));
         if (category != null && !category.isBlank()) {
             params.put("contentTypeId", category);
         }
 
         JsonNode root = callTourApi("/" + service(lang) + "/locationBasedList2", params);
         List<TourSpotResponse> spots = parseSpots(root);
-        log.info("[Tour] 근접 조회 완료. lat={}, lng={}, radius={}, count={}", lat, lng, radius, spots.size());
-        return spots;
+        long totalCount = root.path("response").path("body").path("totalCount").asLong();
+        log.info("[Tour] 근접 조회 완료. lat={}, lng={}, radius={}, page={}, size={}, count={}",
+                lat, lng, radius, page, size, spots.size());
+        return PageResponse.of(new PageImpl<>(spots, PageRequest.of(page - 1, size), totalCount));
     }
 
     @Cacheable(value = "tourSearch", key = "#keyword + ',' + #lang")

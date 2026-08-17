@@ -4,6 +4,7 @@ import com.kk.klist.domain.tour.dto.response.TourDetailResponse;
 import com.kk.klist.domain.tour.dto.response.TourSpotResponse;
 import com.kk.klist.domain.tour.service.TourService;
 import com.kk.klist.global.response.ApiResponse;
+import com.kk.klist.global.response.PageResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,20 +20,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class TourController {
 
     private static final int DEFAULT_RADIUS_METERS = 2000;
+    private static final int DEFAULT_NEARBY_SIZE = 50;
     private static final String DEFAULT_LANG = "ko";
 
     private final TourService tourService;
 
     @GetMapping("/nearby")
-    public ResponseEntity<ApiResponse<List<TourSpotResponse>>> getNearby(
+    public ResponseEntity<ApiResponse<PageResponse<TourSpotResponse>>> getNearby(
             @RequestParam double lat,
             @RequestParam double lng,
             @RequestParam(defaultValue = "" + DEFAULT_RADIUS_METERS) int radius,
             @RequestParam(required = false) String category,
-            @RequestParam(defaultValue = DEFAULT_LANG) String lang
+            @RequestParam(defaultValue = DEFAULT_LANG) String lang,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "" + DEFAULT_NEARBY_SIZE) int size
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                tourService.findNearby(lat, lng, radius, category, lang)));
+                tourService.findNearby(lat, lng, radius, category, lang, page, size)));
     }
 
     @GetMapping("/search")
