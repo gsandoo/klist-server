@@ -16,6 +16,7 @@ public record TourDetailResponse(
         String address,
         String overview,
         String useTime,
+        String restDate,
         List<String> images
 ) {
 }
