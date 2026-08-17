@@ -9,10 +9,20 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum ChatErrorCode implements ErrorCode {
 
+    SESSION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "CHAT_SESSION_NOT_FOUND",
+            "존재하지 않거나 만료된 채팅 세션입니다."
+    ),
+    SESSION_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "CHAT_SESSION_ACCESS_DENIED",
+            "해당 채팅 세션에 접근할 권한이 없습니다."
+    ),
     SESSION_STORAGE_UNAVAILABLE(
             HttpStatus.SERVICE_UNAVAILABLE,
             "CHAT_SESSION_STORAGE_UNAVAILABLE",
-            "채팅 세션을 생성할 수 없습니다. 잠시 후 다시 시도해주세요."
+            "채팅 세션 저장소를 사용할 수 없습니다. 잠시 후 다시 시도해주세요."
     );
 
     private final HttpStatus httpStatus;
