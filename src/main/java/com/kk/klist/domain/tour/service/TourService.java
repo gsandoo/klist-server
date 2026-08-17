@@ -121,12 +121,15 @@ public class TourService {
         }
 
         String useTime = null;
+        String restDate = null;
         if (contentTypeId != null && !contentTypeId.isBlank()) {
             Map<String, String> introRequestParams = commonParams();
             introRequestParams.put("contentId", contentId);
             introRequestParams.put("contentTypeId", contentTypeId);
             JsonNode introItem = firstItem(callTourApi("/" + service(lang) + "/detailIntro2", introRequestParams));
             useTime = firstNonBlank(introItem, "usetime", "opentime", "usetimeculture", "playtime", "opentimefood");
+            restDate = firstNonBlank(introItem,
+                    "restdate", "restdateculture", "restdatefood", "restdateshopping", "restdateleports");
         }
 
         String resolvedContentTypeId = commonItem.path("contenttypeid").asString();
@@ -144,6 +147,7 @@ public class TourService {
                 commonItem.path("addr1").asString(),
                 emptyToNull(commonItem.path("overview").asString()),
                 useTime,
+                restDate,
                 images
         );
         log.info("[Tour] 상세 조회 완료. contentId={}, images={}", contentId, images.size());
