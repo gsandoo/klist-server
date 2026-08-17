@@ -13,6 +13,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.kk.klist.domain.chat.domain.exception.ChatErrorCode;
 import com.kk.klist.domain.chat.domain.exception.ChatException;
 import com.kk.klist.domain.chat.dto.response.ChatSessionCreateResponse;
+import com.kk.klist.domain.chat.dto.request.ChatQueryRequest;
+import com.kk.klist.domain.chat.dto.response.ChatQueryResponse;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotResponseStatus;
 import com.kk.klist.domain.chat.service.ChatService;
 import com.kk.klist.global.security.config.SecurityConfig;
 import com.kk.klist.global.security.auth.CustomUserDetails;
@@ -96,6 +99,79 @@ class ChatControllerTest {
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("CHAT_SESSION_STORAGE_UNAVAILABLE"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/chat/query 요청이 유효하면 Chatbot 응답을 반환한다")
+    void query_whenValidRequest_returns200WithChatbotResponse() throws Exception {
+        // given
+        Long userId = 1L;
+        ChatQueryResponse response = new ChatQueryResponse(
+                "request-id",
+                "session-id",
+                "trace-id",
+                ChatbotResponseStatus.COMPLETED,
+                "완료된 답변"
+        );
+        given(chatService.query(org.mockito.ArgumentMatchers.eq(userId),
+                org.mockito.ArgumentMatchers.any(ChatQueryRequest.class)))
+                .willReturn(response);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/chat/query")
+                        .with(authentication(createAuthentication(userId)))
+                        .with(csrf())
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sessionId": "session-id",
+                                  "message": "현재 질문"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.requestId").value("request-id"))
+                .andExpect(jsonPath("$.data.sessionId").value("session-id"))
+                .andExpect(jsonPath("$.data.traceId").value("trace-id"))
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.answer").value("완료된 답변"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/chat/query 질문이 공백이면 400을 반환한다")
+    void query_whenMessageBlank_returns400() throws Exception {
+        // when & then
+        mockMvc.perform(post("/api/v1/chat/query")
+                        .with(authentication(createAuthentication(1L)))
+                        .with(csrf())
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sessionId": "session-id",
+                                  "message": "   "
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("G002"))
+                .andExpect(jsonPath("$.errors[0].field").value("message"));
+        then(chatService).should(never()).query(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/chat/query 질문이 4000자를 초과하면 400을 반환한다")
+    void query_whenMessageTooLong_returns400() throws Exception {
+        // given
+        String message = "a".repeat(4001);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/chat/query")
+                        .with(authentication(createAuthentication(1L)))
+                        .with(csrf())
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"sessionId\":\"session-id\",\"message\":\"" + message + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("G002"));
     }
 
     private UsernamePasswordAuthenticationToken createAuthentication(Long userId) {
