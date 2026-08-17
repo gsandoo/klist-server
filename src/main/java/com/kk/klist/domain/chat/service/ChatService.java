@@ -1,9 +1,16 @@
 package com.kk.klist.domain.chat.service;
 
 import com.kk.klist.domain.chat.domain.ChatContextMessage;
+import com.kk.klist.domain.chat.client.ChatbotClient;
 import com.kk.klist.domain.chat.domain.exception.ChatErrorCode;
 import com.kk.klist.domain.chat.domain.exception.ChatException;
 import com.kk.klist.domain.chat.dto.response.ChatSessionCreateResponse;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotContextMessage;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryRequest;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryResponse;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotResponseStatus;
+import com.kk.klist.domain.chat.dto.request.ChatQueryRequest;
+import com.kk.klist.domain.chat.dto.response.ChatQueryResponse;
 import com.kk.klist.domain.chat.repository.ChatSessionRepository;
 import com.kk.klist.global.util.TimeProvider;
 import java.time.Duration;
@@ -18,10 +25,12 @@ public class ChatService {
 
     static final Duration SESSION_TTL = Duration.ofMinutes(3);
     static final int CONTEXT_LIMIT = 10;
+    static final long CHATBOT_TIMEOUT_MS = 20000L; // 질의 대기 시간 20초
 
     private final ChatSessionRepository chatSessionRepository;
     private final ChatSessionIdGenerator sessionIdGenerator;
     private final TimeProvider timeProvider;
+    private final ChatbotClient chatbotClient;
 
     public ChatSessionCreateResponse createSession(Long userId) {
         String sessionId = sessionIdGenerator.generate();
@@ -59,5 +68,41 @@ public class ChatService {
                 SESSION_TTL,
                 CONTEXT_LIMIT
         );
+    }
+
+    public ChatQueryResponse query(Long userId, ChatQueryRequest request) {
+        validateSessionOwnership(userId, request.sessionId());
+
+        String requestId = sessionIdGenerator.generate();
+        String traceId = sessionIdGenerator.generate();
+        List<ChatbotContextMessage> context = chatSessionRepository
+                .findRecentContext(request.sessionId(), CONTEXT_LIMIT)
+                .stream()
+                .map(ChatbotContextMessage::from)
+                .toList();
+        ChatbotQueryRequest chatbotRequest = new ChatbotQueryRequest(
+                requestId,
+                request.sessionId(),
+                userId,
+                request.message(),
+                context,
+                CHATBOT_TIMEOUT_MS
+        );
+
+        ChatbotQueryResponse chatbotResponse = chatbotClient.query(chatbotRequest, traceId);
+        if (chatbotResponse.status() == ChatbotResponseStatus.COMPLETED) {
+            if (chatbotResponse.answer() == null || chatbotResponse.answer().isBlank()) {
+                throw new ChatException(ChatErrorCode.CHATBOT_INVALID_RESPONSE);
+            }
+            chatSessionRepository.saveCompletedExchange(
+                    request.sessionId(),
+                    ChatContextMessage.user(request.message()),
+                    ChatContextMessage.assistant(chatbotResponse.answer()),
+                    SESSION_TTL,
+                    CONTEXT_LIMIT
+            );
+        }
+
+        return ChatQueryResponse.from(requestId, request.sessionId(), traceId, chatbotResponse);
     }
 }
