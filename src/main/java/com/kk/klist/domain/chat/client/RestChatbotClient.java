@@ -4,14 +4,16 @@ import com.kk.klist.domain.chat.domain.exception.ChatErrorCode;
 import com.kk.klist.domain.chat.domain.exception.ChatException;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryRequest;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryResponse;
-import lombok.RequiredArgsConstructor;
+import java.io.InterruptedIOException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 @Component
-@RequiredArgsConstructor
 public class RestChatbotClient implements ChatbotClient {
 
     private static final String QUERY_PATH = "/internal/chat/query";
@@ -19,9 +21,15 @@ public class RestChatbotClient implements ChatbotClient {
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     private final RestClient chatbotRestClient;
+    private final String internalApiKey;
 
-    @Value("${chatbot.internal-api-key}")
-    private String internalApiKey;
+    public RestChatbotClient(
+            RestClient chatbotRestClient,
+            @Value("${chatbot.internal-api-key}") String internalApiKey
+    ) {
+        this.chatbotRestClient = chatbotRestClient;
+        this.internalApiKey = internalApiKey;
+    }
 
     @Override
     public ChatbotQueryResponse query(ChatbotQueryRequest request, String traceId) {
@@ -39,8 +47,43 @@ public class RestChatbotClient implements ChatbotClient {
             return response;
         } catch (ChatException e) {
             throw e;
+        } catch (HttpStatusCodeException e) {
+            throw new ChatException(mapStatus(e.getStatusCode()));
+        } catch (ResourceAccessException e) {
+            if (hasSocketTimeoutCause(e)) {
+                throw new ChatException(ChatErrorCode.CHATBOT_TIMEOUT);
+            }
+            throw new ChatException(ChatErrorCode.CHATBOT_API_ERROR);
         } catch (RestClientException e) {
+            if (hasSocketTimeoutCause(e)) {
+                throw new ChatException(ChatErrorCode.CHATBOT_TIMEOUT);
+            }
             throw new ChatException(ChatErrorCode.CHATBOT_API_ERROR);
         }
+    }
+
+    private ChatErrorCode mapStatus(HttpStatusCode status) {
+        return switch (status.value()) {
+            case 400 -> ChatErrorCode.CHATBOT_BAD_REQUEST;
+            case 401 -> ChatErrorCode.CHATBOT_UNAUTHORIZED;
+            case 409 -> ChatErrorCode.CHATBOT_REQUEST_CONFLICT;
+            case 500 -> ChatErrorCode.CHATBOT_INTERNAL_ERROR;
+            case 503 -> ChatErrorCode.CHATBOT_UNAVAILABLE;
+            case 504 -> ChatErrorCode.CHATBOT_TIMEOUT;
+            default -> ChatErrorCode.CHATBOT_API_ERROR;
+        };
+    }
+
+    private boolean hasSocketTimeoutCause(Throwable error) {
+        Throwable cause = error;
+        while (cause != null) {
+            if (cause instanceof InterruptedIOException
+                    || cause.getClass().getSimpleName().contains("Timeout")
+                    || cause.getMessage() != null && cause.getMessage().toLowerCase().contains("timed out")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 }
