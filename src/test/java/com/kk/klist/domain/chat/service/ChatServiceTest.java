@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.ArgumentCaptor;
@@ -206,7 +208,11 @@ class ChatServiceTest {
                 .willReturn(context);
         given(chatbotClient.query(org.mockito.ArgumentMatchers.any(ChatbotQueryRequest.class),
                 org.mockito.ArgumentMatchers.eq("trace-id")))
-                .willReturn(new ChatbotQueryResponse(ChatbotResponseStatus.COMPLETED, "완료된 답변"));
+                .willReturn(new ChatbotQueryResponse(
+                        ChatbotResponseStatus.COMPLETED,
+                        "완료된 답변",
+                        List.of("서울 실내 관광지를 추천해줘")
+                ));
 
         // when
         ChatQueryResponse response = chatService.query(userId, request);
@@ -216,6 +222,7 @@ class ChatServiceTest {
         assertThat(response.traceId()).isEqualTo("trace-id");
         assertThat(response.status()).isEqualTo(ChatbotResponseStatus.COMPLETED);
         assertThat(response.answer()).isEqualTo("완료된 답변");
+        assertThat(response.suggestions()).containsExactly("서울 실내 관광지를 추천해줘");
 
         ArgumentCaptor<ChatbotQueryRequest> requestCaptor = ArgumentCaptor.forClass(ChatbotQueryRequest.class);
         then(chatbotClient).should(times(1)).query(requestCaptor.capture(),
@@ -225,7 +232,7 @@ class ChatServiceTest {
         assertThat(chatbotRequest.sessionId()).isEqualTo(sessionId);
         assertThat(chatbotRequest.userId()).isEqualTo(userId);
         assertThat(chatbotRequest.message()).isEqualTo("현재 질문");
-        assertThat(chatbotRequest.timeoutMs()).isEqualTo(30000L);
+        assertThat(chatbotRequest.timeoutMs()).isEqualTo(ChatService.CHATBOT_TIMEOUT_MS);
         assertThat(chatbotRequest.context()).extracting("content")
                 .containsExactly("이전 질문", "이전 답변");
         then(chatSessionRepository).should(times(1)).saveCompletedExchange(
@@ -237,9 +244,14 @@ class ChatServiceTest {
         );
     }
 
-    @Test
-    @DisplayName("Chatbot이 NO_RESULT를 반환하면 문맥을 저장하지 않는다")
-    void query_whenChatbotReturnsNoResult_doesNotSaveContext() {
+    @ParameterizedTest
+    @EnumSource(value = ChatbotResponseStatus.class, names = {
+            "NO_RESULT", "UNSUPPORTED", "CLARIFICATION_REQUIRED"
+    })
+    @DisplayName("Chatbot이 완료 이외의 정상 상태를 반환하면 응답을 전달하고 문맥을 저장하지 않는다")
+    void query_whenChatbotReturnsNonCompletedStatus_returnsResponseWithoutSavingContext(
+            ChatbotResponseStatus status
+    ) {
         // given
         String sessionId = "session-id";
         given(chatSessionRepository.findOwner(sessionId)).willReturn(Optional.of(1L));
@@ -248,13 +260,19 @@ class ChatServiceTest {
                 .willReturn(List.of());
         given(chatbotClient.query(org.mockito.ArgumentMatchers.any(ChatbotQueryRequest.class),
                 org.mockito.ArgumentMatchers.eq("trace-id")))
-                .willReturn(new ChatbotQueryResponse(ChatbotResponseStatus.NO_RESULT, null));
+                .willReturn(new ChatbotQueryResponse(
+                        status,
+                        "조건에 맞는 답변입니다.",
+                        List.of("지역을 알려주세요")
+                ));
 
         // when
         ChatQueryResponse response = chatService.query(1L, new ChatQueryRequest(sessionId, "현재 질문"));
 
         // then
-        assertThat(response.status()).isEqualTo(ChatbotResponseStatus.NO_RESULT);
+        assertThat(response.status()).isEqualTo(status);
+        assertThat(response.answer()).isEqualTo("조건에 맞는 답변입니다.");
+        assertThat(response.suggestions()).containsExactly("지역을 알려주세요");
         then(chatSessionRepository).should(never()).saveCompletedExchange(
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(),
@@ -262,6 +280,54 @@ class ChatServiceTest {
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyInt()
         );
+    }
+
+    @Test
+    @DisplayName("Chatbot 정상 응답의 answer가 비어 있으면 잘못된 응답 예외가 발생된다")
+    void query_whenChatbotAnswerIsBlank_throwsInvalidResponse() {
+        // given
+        String sessionId = "session-id";
+        given(chatSessionRepository.findOwner(sessionId)).willReturn(Optional.of(1L));
+        given(sessionIdGenerator.generate()).willReturn("request-id", "trace-id");
+        given(chatSessionRepository.findRecentContext(sessionId, ChatService.CONTEXT_LIMIT))
+                .willReturn(List.of());
+        given(chatbotClient.query(org.mockito.ArgumentMatchers.any(ChatbotQueryRequest.class),
+                org.mockito.ArgumentMatchers.eq("trace-id")))
+                .willReturn(new ChatbotQueryResponse(
+                        ChatbotResponseStatus.NO_RESULT,
+                        " ",
+                        List.of("다른 지역을 검색해줘")
+                ));
+
+        // when & then
+        assertThatThrownBy(() -> chatService.query(1L, new ChatQueryRequest(sessionId, "현재 질문")))
+                .isInstanceOf(ChatException.class)
+                .satisfies(error -> assertThat(((ChatException) error).getErrorCode())
+                        .isEqualTo(ChatErrorCode.CHATBOT_INVALID_RESPONSE));
+    }
+
+    @Test
+    @DisplayName("Chatbot 정상 응답의 suggestions가 비어 있으면 잘못된 응답 예외가 발생된다")
+    void query_whenChatbotSuggestionsAreEmpty_throwsInvalidResponse() {
+        // given
+        String sessionId = "session-id";
+        given(chatSessionRepository.findOwner(sessionId)).willReturn(Optional.of(1L));
+        given(sessionIdGenerator.generate()).willReturn("request-id", "trace-id");
+        given(chatSessionRepository.findRecentContext(sessionId, ChatService.CONTEXT_LIMIT))
+                .willReturn(List.of());
+        given(chatbotClient.query(org.mockito.ArgumentMatchers.any(ChatbotQueryRequest.class),
+                org.mockito.ArgumentMatchers.eq("trace-id")))
+                .willReturn(new ChatbotQueryResponse(
+                        ChatbotResponseStatus.UNSUPPORTED,
+                        "관광 관련 질문을 해주세요.",
+                        List.of()
+                ));
+
+        // when & then
+        assertThatThrownBy(() -> chatService.query(1L, new ChatQueryRequest(sessionId, "현재 질문")))
+                .isInstanceOf(ChatException.class)
+                .satisfies(error -> assertThat(((ChatException) error).getErrorCode())
+                        .isEqualTo(ChatErrorCode.CHATBOT_INVALID_RESPONSE));
     }
 
     @Test
