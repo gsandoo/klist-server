@@ -23,7 +23,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -36,8 +35,7 @@ class RestChatbotClientTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder().baseUrl("http://chatbot");
         server = MockRestServiceServer.bindTo(builder).build();
-        chatbotClient = new RestChatbotClient(builder.build());
-        ReflectionTestUtils.setField(chatbotClient, "internalApiKey", "internal-key");
+        chatbotClient = new RestChatbotClient(builder.build(), "internal-key");
     }
 
     @Test
@@ -73,8 +71,8 @@ class RestChatbotClientTest {
     }
 
     @Test
-    @DisplayName("Chatbot 내부 API 호출에 실패하면 ChatbotApiError 예외가 발생한다")
-    void query_whenChatbotFails_throwsChatbotApiError() {
+    @DisplayName("Chatbot 내부 API가 500을 반환하면 ChatbotInternalError 예외가 발생한다")
+    void query_whenChatbotReturns500_throwsChatbotInternalError() {
         // given
         ChatbotQueryRequest request = new ChatbotQueryRequest(
                 "request-id", "session-id", 1L, "질문", List.of(), 5000L);
@@ -85,6 +83,6 @@ class RestChatbotClientTest {
         assertThatThrownBy(() -> chatbotClient.query(request, "trace-id"))
                 .isInstanceOf(ChatException.class)
                 .satisfies(error -> assertThat(((ChatException) error).getErrorCode())
-                        .isEqualTo(ChatErrorCode.CHATBOT_API_ERROR));
+                        .isEqualTo(ChatErrorCode.CHATBOT_INTERNAL_ERROR));
     }
 }

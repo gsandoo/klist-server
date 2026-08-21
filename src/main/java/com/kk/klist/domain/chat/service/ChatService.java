@@ -25,7 +25,7 @@ public class ChatService {
 
     static final Duration SESSION_TTL = Duration.ofMinutes(3);
     static final int CONTEXT_LIMIT = 10;
-    static final long CHATBOT_TIMEOUT_MS = 20000L; // 질의 대기 시간 20초
+    static final long CHATBOT_TIMEOUT_MS = 30000L;
 
     private final ChatSessionRepository chatSessionRepository;
     private final ChatSessionIdGenerator sessionIdGenerator;

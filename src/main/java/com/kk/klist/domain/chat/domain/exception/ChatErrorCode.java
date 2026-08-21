@@ -24,6 +24,36 @@ public enum ChatErrorCode implements ErrorCode {
             "CHATBOT_API_ERROR",
             "Chatbot 서버 요청에 실패했습니다."
     ),
+    CHATBOT_BAD_REQUEST(
+            HttpStatus.BAD_REQUEST,
+            "CHATBOT_BAD_REQUEST",
+            "Chatbot 서버가 요청을 처리할 수 없습니다."
+    ),
+    CHATBOT_UNAUTHORIZED(
+            HttpStatus.UNAUTHORIZED,
+            "CHATBOT_UNAUTHORIZED",
+            "Chatbot 서버 인증에 실패했습니다."
+    ),
+    CHATBOT_REQUEST_CONFLICT(
+            HttpStatus.CONFLICT,
+            "CHATBOT_REQUEST_CONFLICT",
+            "동일한 Chatbot 요청이 이미 처리 중이거나 충돌했습니다."
+    ),
+    CHATBOT_INTERNAL_ERROR(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "CHATBOT_INTERNAL_ERROR",
+            "Chatbot 서버 내부 처리에 실패했습니다."
+    ),
+    CHATBOT_UNAVAILABLE(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "CHATBOT_UNAVAILABLE",
+            "Chatbot 서버를 일시적으로 사용할 수 없습니다."
+    ),
+    CHATBOT_TIMEOUT(
+            HttpStatus.GATEWAY_TIMEOUT,
+            "CHATBOT_TIMEOUT",
+            "Chatbot 서버 응답 시간이 초과되었습니다."
+    ),
     CHATBOT_INVALID_RESPONSE(
             HttpStatus.BAD_GATEWAY,
             "CHATBOT_INVALID_RESPONSE",

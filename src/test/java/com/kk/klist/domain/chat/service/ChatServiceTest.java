@@ -225,7 +225,7 @@ class ChatServiceTest {
         assertThat(chatbotRequest.sessionId()).isEqualTo(sessionId);
         assertThat(chatbotRequest.userId()).isEqualTo(userId);
         assertThat(chatbotRequest.message()).isEqualTo("현재 질문");
-        assertThat(chatbotRequest.timeoutMs()).isEqualTo(5000L);
+        assertThat(chatbotRequest.timeoutMs()).isEqualTo(30000L);
         assertThat(chatbotRequest.context()).extracting("content")
                 .containsExactly("이전 질문", "이전 답변");
         then(chatSessionRepository).should(times(1)).saveCompletedExchange(
