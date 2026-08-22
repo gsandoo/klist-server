@@ -15,8 +15,12 @@ public class MemberService {
     private final MemberRepository memberRepository;
 
     @Transactional
-    public Member upsertMember(OAuthProvider oauthProvider, String oauthId, String nickname) {
+    public MemberUpsertResult upsertMember(
+            OAuthProvider oauthProvider, String oauthId, String nickname, String profileImageUrl) {
         return memberRepository.findByOauthProviderAndOauthId(oauthProvider, oauthId)
-                .orElseGet(() -> memberRepository.save(Member.create(nickname, oauthProvider, oauthId)));
+                .map(member -> new MemberUpsertResult(member, false))
+                .orElseGet(() -> new MemberUpsertResult(
+                        memberRepository.save(Member.create(nickname, oauthProvider, oauthId, profileImageUrl)),
+                        true));
     }
 }

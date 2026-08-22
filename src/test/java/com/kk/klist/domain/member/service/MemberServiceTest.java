@@ -29,7 +29,7 @@ class MemberServiceTest {
     private MemberRepository memberRepository;
 
     @Test
-    @DisplayName("존재하지 않는 provider+id로 upsert하면 신규 회원이 생성된다")
+    @DisplayName("존재하지 않는 provider+id로 upsert하면 신규 회원이 생성되고 isNewMember=true를 반환한다")
     void upsertMember_whenNotExists_createsNewMember() {
         // given
         String oauthId = "kakao-oauth-id";
@@ -39,11 +39,14 @@ class MemberServiceTest {
                 .willAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        Member result = memberService.upsertMember(OAuthProvider.KAKAO, oauthId, "여행자1234");
+        MemberUpsertResult result = memberService.upsertMember(
+                OAuthProvider.KAKAO, oauthId, "여행자1234", "https://example.com/profile.jpg");
 
         // then
-        assertThat(result.getOauthProvider()).isEqualTo(OAuthProvider.KAKAO);
-        assertThat(result.getOauthId()).isEqualTo(oauthId);
+        assertThat(result.isNewMember()).isTrue();
+        assertThat(result.member().getOauthProvider()).isEqualTo(OAuthProvider.KAKAO);
+        assertThat(result.member().getOauthId()).isEqualTo(oauthId);
+        assertThat(result.member().getProfileImageUrl()).isEqualTo("https://example.com/profile.jpg");
         then(memberRepository).should(times(1)).save(any(Member.class));
     }
 
@@ -57,10 +60,13 @@ class MemberServiceTest {
                 .willReturn(Optional.of(existingMember));
 
         // when
-        Member result = memberService.upsertMember(OAuthProvider.KAKAO, oauthId, "여행자1234");
+        MemberUpsertResult result = memberService.upsertMember(
+                OAuthProvider.KAKAO, oauthId, "여행자1234", "https://example.com/new-profile.jpg");
 
         // then
-        assertThat(result).isEqualTo(existingMember);
+        assertThat(result.isNewMember()).isFalse();
+        assertThat(result.member()).isEqualTo(existingMember);
+        assertThat(result.member().getProfileImageUrl()).isEqualTo("https://example.com/profile.jpg");
         then(memberRepository).should(never()).save(any(Member.class));
     }
 }

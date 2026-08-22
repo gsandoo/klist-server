@@ -50,18 +50,20 @@ public class Member extends BaseTimeEntity {
     private String profileImageUrl;
 
     @Builder
-    private Member(String nickname, OAuthProvider oauthProvider, String oauthId) {
+    private Member(String nickname, OAuthProvider oauthProvider, String oauthId, String profileImageUrl) {
         this.nickname = nickname;
         this.role = Role.USER;
         this.oauthProvider = oauthProvider;
         this.oauthId = oauthId;
+        this.profileImageUrl = profileImageUrl;
     }
 
-    public static Member create(String nickname, OAuthProvider oauthProvider, String oauthId) {
+    public static Member create(String nickname, OAuthProvider oauthProvider, String oauthId, String profileImageUrl) {
         return Member.builder()
                 .nickname(nickname)
                 .oauthProvider(oauthProvider)
                 .oauthId(oauthId)
+                .profileImageUrl(profileImageUrl)
                 .build();
     }
 }
