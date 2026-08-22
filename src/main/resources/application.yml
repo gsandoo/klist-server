@@ -54,3 +54,8 @@ cors:
 
 oauth:
   client-redirect-uri: http://localhost:5173/oauth/callback
+
+chatbot:
+  base-url: ${CHATBOT_BASE_URL:http://localhost:8081}
+  internal-api-key: ${INTERNAL_API_KEY:}
+  timeout-ms: ${CHATBOT_HTTP_TIMEOUT_MS:35000}
