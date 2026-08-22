@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.kk.klist.domain.auth.service.CustomOAuth2UserService;
 import com.kk.klist.domain.chat.domain.exception.ChatErrorCode;
 import com.kk.klist.domain.chat.domain.exception.ChatException;
 import com.kk.klist.domain.chat.dto.response.ChatSessionCreateResponse;
@@ -21,6 +22,8 @@ import com.kk.klist.global.security.config.SecurityConfig;
 import com.kk.klist.global.security.auth.CustomUserDetails;
 import com.kk.klist.global.security.auth.Role;
 import com.kk.klist.global.security.jwt.JwtTokenProvider;
+import com.kk.klist.global.security.oauth.OAuth2LoginFailureHandler;
+import com.kk.klist.global.security.oauth.OAuth2LoginSuccessHandler;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import org.junit.jupiter.api.DisplayName;
@@ -52,6 +55,15 @@ class ChatControllerTest {
 
     @MockitoBean
     private CacheManager cacheManager;
+
+    @MockitoBean
+    private CustomOAuth2UserService customOAuth2UserService;
+
+    @MockitoBean
+    private OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+
+    @MockitoBean
+    private OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
     @Test
     @DisplayName("POST /api/v1/chat/sessions 요청이 인증되면 201과 세션 정보가 반환된다")
