@@ -7,6 +7,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 public class JwtTokenProvider {
 
     private static final String CLAIM_ROLE = "role";
+    private static final String CLAIM_TOKEN_ID = "tokenId";
 
     private final SecretKey secretKey;
     private final long accessTokenExpirationMillis;
@@ -42,12 +44,22 @@ public class JwtTokenProvider {
 
     public String createRefreshToken(Long memberId) {
         Date now = new Date();
+        String tokenId = UUID.randomUUID().toString();
         return Jwts.builder()
                 .subject(String.valueOf(memberId))
+                .claim(CLAIM_TOKEN_ID, tokenId)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + refreshTokenExpirationMillis))
                 .signWith(secretKey)
                 .compact();
+    }
+
+    public String getTokenId(String token) {
+        return parseClaims(token).get(CLAIM_TOKEN_ID, String.class);
+    }
+
+    public long getAccessTokenExpirationMillis() {
+        return accessTokenExpirationMillis;
     }
 
     public boolean validateToken(String token) {

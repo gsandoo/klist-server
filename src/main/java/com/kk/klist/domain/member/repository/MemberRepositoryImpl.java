@@ -13,6 +13,11 @@ public class MemberRepositoryImpl implements MemberRepository {
     private final MemberJpaRepository memberJpaRepository;
 
     @Override
+    public Optional<Member> findById(Long id) {
+        return memberJpaRepository.findById(id);
+    }
+
+    @Override
     public Optional<Member> findByOauthProviderAndOauthId(OAuthProvider oauthProvider, String oauthId) {
         return memberJpaRepository.findByOauthProviderAndOauthId(oauthProvider, oauthId);
     }
