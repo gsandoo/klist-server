@@ -3,6 +3,8 @@ package com.kk.klist.domain.member.service;
 import com.kk.klist.domain.member.domain.entity.Member;
 import com.kk.klist.domain.member.domain.entity.OAuthProvider;
 import com.kk.klist.domain.member.repository.MemberRepository;
+import com.kk.klist.global.exception.AuthErrorCode;
+import com.kk.klist.global.exception.AuthException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+
+    public Member getById(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new AuthException(AuthErrorCode.UNAUTHORIZED));
+    }
 
     @Transactional
     public MemberUpsertResult upsertMember(

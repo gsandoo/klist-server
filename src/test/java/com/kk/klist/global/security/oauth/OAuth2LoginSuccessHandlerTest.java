@@ -2,7 +2,9 @@ package com.kk.klist.global.security.oauth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
+import com.kk.klist.domain.auth.service.AuthService;
 import com.kk.klist.global.security.auth.Role;
 import com.kk.klist.global.security.jwt.JwtTokenProvider;
 import java.io.IOException;
@@ -24,13 +26,16 @@ class OAuth2LoginSuccessHandlerTest {
     @Mock
     private JwtTokenProvider jwtTokenProvider;
 
+    @Mock
+    private AuthService authService;
+
     private OAuth2LoginSuccessHandler successHandler;
 
     @Test
     @DisplayName("로그인에 성공하면 토큰을 발급하고 accessToken/refreshToken/isNewMember를 담은 fragment로 리다이렉트한다")
     void onAuthenticationSuccess_whenAuthenticated_redirectsWithTokenFragment() throws IOException {
         // given
-        successHandler = new OAuth2LoginSuccessHandler(jwtTokenProvider, CLIENT_REDIRECT_URI);
+        successHandler = new OAuth2LoginSuccessHandler(jwtTokenProvider, authService, CLIENT_REDIRECT_URI);
         OAuthLoginPrincipal principal = new OAuthLoginPrincipal(1L, Role.USER, true);
         Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null);
         given(jwtTokenProvider.createAccessToken(1L, Role.USER)).willReturn("access-token");
@@ -45,5 +50,6 @@ class OAuth2LoginSuccessHandlerTest {
         // then
         assertThat(response.getRedirectedUrl())
                 .isEqualTo(CLIENT_REDIRECT_URI + "#accessToken=access-token&refreshToken=refresh-token&isNewMember=true");
+        then(authService).should().saveRefreshToken(1L, "refresh-token");
     }
 }

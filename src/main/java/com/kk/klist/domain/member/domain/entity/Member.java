@@ -49,6 +49,9 @@ public class Member extends BaseTimeEntity {
     @Column
     private String profileImageUrl;
 
+    @Column
+    private String refreshTokenId;
+
     @Builder
     private Member(String nickname, OAuthProvider oauthProvider, String oauthId, String profileImageUrl) {
         this.nickname = nickname;
@@ -65,5 +68,13 @@ public class Member extends BaseTimeEntity {
                 .oauthId(oauthId)
                 .profileImageUrl(profileImageUrl)
                 .build();
+    }
+
+    public void updateRefreshToken(String tokenId) {
+        this.refreshTokenId = tokenId;
+    }
+
+    public void clearRefreshToken() {
+        this.refreshTokenId = null;
     }
 }
