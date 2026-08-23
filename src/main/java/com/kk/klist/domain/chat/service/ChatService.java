@@ -90,10 +90,8 @@ public class ChatService {
         );
 
         ChatbotQueryResponse chatbotResponse = chatbotClient.query(chatbotRequest, traceId);
+        validateChatbotResponse(chatbotResponse);
         if (chatbotResponse.status() == ChatbotResponseStatus.COMPLETED) {
-            if (chatbotResponse.answer() == null || chatbotResponse.answer().isBlank()) {
-                throw new ChatException(ChatErrorCode.CHATBOT_INVALID_RESPONSE);
-            }
             chatSessionRepository.saveCompletedExchange(
                     request.sessionId(),
                     ChatContextMessage.user(request.message()),
@@ -104,5 +102,17 @@ public class ChatService {
         }
 
         return ChatQueryResponse.from(requestId, request.sessionId(), traceId, chatbotResponse);
+    }
+
+    private void validateChatbotResponse(ChatbotQueryResponse response) {
+        if (response == null
+                || response.status() == null
+                || response.answer() == null
+                || response.answer().isBlank()
+                || response.suggestions() == null
+                || response.suggestions().isEmpty()
+                || response.suggestions().stream().anyMatch(suggestion -> suggestion == null || suggestion.isBlank())) {
+            throw new ChatException(ChatErrorCode.CHATBOT_INVALID_RESPONSE);
+        }
     }
 }

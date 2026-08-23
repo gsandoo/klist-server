@@ -57,7 +57,8 @@ class RestChatbotClientTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"requestId\":\"request-id\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"timeoutMs\":5000")))
                 .andRespond(withSuccess(
-                        "{\"status\":\"COMPLETED\",\"answer\":\"완료된 답변\"}",
+                        "{\"status\":\"COMPLETED\",\"answer\":\"완료된 답변\"," +
+                                "\"suggestions\":[\"다른 관광지도 알려줘\"]}",
                         MediaType.APPLICATION_JSON
                 ));
 
@@ -67,6 +68,7 @@ class RestChatbotClientTest {
         // then
         assertThat(response.status()).isEqualTo(ChatbotResponseStatus.COMPLETED);
         assertThat(response.answer()).isEqualTo("완료된 답변");
+        assertThat(response.suggestions()).containsExactly("다른 관광지도 알려줘");
         server.verify();
     }
 

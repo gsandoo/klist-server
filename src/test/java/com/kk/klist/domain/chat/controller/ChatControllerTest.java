@@ -23,8 +23,11 @@ import com.kk.klist.global.security.auth.Role;
 import com.kk.klist.global.security.jwt.JwtTokenProvider;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
@@ -101,17 +104,21 @@ class ChatControllerTest {
                 .andExpect(jsonPath("$.code").value("CHAT_SESSION_STORAGE_UNAVAILABLE"));
     }
 
-    @Test
-    @DisplayName("POST /api/v1/chat/query 요청이 유효하면 Chatbot 응답을 반환한다")
-    void query_whenValidRequest_returns200WithChatbotResponse() throws Exception {
+    @ParameterizedTest
+    @EnumSource(ChatbotResponseStatus.class)
+    @DisplayName("POST /api/v1/chat/query가 각 Chatbot 정상 상태와 답변 및 후속 질문을 200으로 반환한다")
+    void query_whenChatbotReturnsNormalStatus_returns200WithResponse(
+            ChatbotResponseStatus chatbotStatus
+    ) throws Exception {
         // given
         Long userId = 1L;
         ChatQueryResponse response = new ChatQueryResponse(
                 "request-id",
                 "session-id",
                 "trace-id",
-                ChatbotResponseStatus.COMPLETED,
-                "완료된 답변"
+                chatbotStatus,
+                "사용자용 답변",
+                List.of("서울 관광지를 추천해줘", "부산 관광지를 추천해줘")
         );
         given(chatService.query(org.mockito.ArgumentMatchers.eq(userId),
                 org.mockito.ArgumentMatchers.any(ChatQueryRequest.class)))
@@ -133,8 +140,10 @@ class ChatControllerTest {
                 .andExpect(jsonPath("$.data.requestId").value("request-id"))
                 .andExpect(jsonPath("$.data.sessionId").value("session-id"))
                 .andExpect(jsonPath("$.data.traceId").value("trace-id"))
-                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
-                .andExpect(jsonPath("$.data.answer").value("완료된 답변"));
+                .andExpect(jsonPath("$.data.status").value(chatbotStatus.name()))
+                .andExpect(jsonPath("$.data.answer").value("사용자용 답변"))
+                .andExpect(jsonPath("$.data.suggestions[0]").value("서울 관광지를 추천해줘"))
+                .andExpect(jsonPath("$.data.suggestions[1]").value("부산 관광지를 추천해줘"));
     }
 
     @Test
