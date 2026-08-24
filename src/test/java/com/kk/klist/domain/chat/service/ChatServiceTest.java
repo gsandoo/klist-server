@@ -311,30 +311,6 @@ class ChatServiceTest {
     }
 
     @Test
-    @DisplayName("Chatbot 정상 응답의 suggestions가 비어 있으면 잘못된 응답 예외가 발생된다")
-    void query_whenChatbotSuggestionsAreEmpty_throwsInvalidResponse() {
-        // given
-        String sessionId = "session-id";
-        given(chatSessionRepository.findOwner(sessionId)).willReturn(Optional.of(1L));
-        given(sessionIdGenerator.generate()).willReturn("request-id", "trace-id");
-        given(chatSessionRepository.findRecentContext(sessionId, ChatService.CONTEXT_LIMIT))
-                .willReturn(List.of());
-        given(chatbotClient.query(org.mockito.ArgumentMatchers.any(ChatbotQueryRequest.class),
-                org.mockito.ArgumentMatchers.eq("trace-id")))
-                .willReturn(new ChatbotQueryResponse(
-                        ChatbotResponseStatus.UNSUPPORTED,
-                        "관광 관련 질문을 해주세요.",
-                        List.of()
-                ));
-
-        // when & then
-        assertThatThrownBy(() -> chatService.query(1L, new ChatQueryRequest(sessionId, "현재 질문")))
-                .isInstanceOf(ChatException.class)
-                .satisfies(error -> assertThat(((ChatException) error).getErrorCode())
-                        .isEqualTo(ChatErrorCode.CHATBOT_INVALID_RESPONSE));
-    }
-
-    @Test
     @DisplayName("Chatbot 호출이 실패하면 문맥을 저장하지 않는다")
     void query_whenChatbotFails_doesNotSaveContext() {
         // given

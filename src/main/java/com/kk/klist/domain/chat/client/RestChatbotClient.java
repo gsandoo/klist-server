@@ -21,7 +21,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.multipart.MultipartFile;
 
 @Component
-@Slf4j
 public class RestChatbotClient implements ChatbotClient {
 
     private static final String QUERY_PATH = "/internal/chat/query";
@@ -50,15 +49,7 @@ public class RestChatbotClient implements ChatbotClient {
                     .body(request)
                     .retrieve()
                     .body(ChatbotQueryResponse.class);
-            String raw = chatbotRestClient.post()
-                    .uri(QUERY_PATH)
-                    .header(INTERNAL_API_KEY_HEADER, internalApiKey)
-                    .header(TRACE_ID_HEADER, traceId)
-                    .body(request)
-                    .retrieve()
-                    .body(String.class);
 
-            log.info("chatbot raw response={}", raw);
             if (response == null || response.status() == null) {
                 throw new ChatException(ChatErrorCode.CHATBOT_INVALID_RESPONSE);
             }
