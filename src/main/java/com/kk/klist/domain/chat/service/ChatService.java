@@ -5,11 +5,14 @@ import com.kk.klist.domain.chat.client.ChatbotClient;
 import com.kk.klist.domain.chat.domain.exception.ChatErrorCode;
 import com.kk.klist.domain.chat.domain.exception.ChatException;
 import com.kk.klist.domain.chat.dto.response.ChatSessionCreateResponse;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotAudioQueryRequest;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotAudioQueryResponse;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotContextMessage;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryRequest;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryResponse;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotResponseStatus;
 import com.kk.klist.domain.chat.dto.request.ChatQueryRequest;
+import com.kk.klist.domain.chat.dto.response.ChatAudioQueryResponse;
 import com.kk.klist.domain.chat.dto.response.ChatQueryResponse;
 import com.kk.klist.domain.chat.repository.ChatSessionRepository;
 import com.kk.klist.global.util.TimeProvider;
@@ -18,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -104,14 +108,67 @@ public class ChatService {
         return ChatQueryResponse.from(requestId, request.sessionId(), traceId, chatbotResponse);
     }
 
+    public ChatAudioQueryResponse queryAudio(Long userId, String sessionId, MultipartFile audio) {
+        if (audio == null || audio.isEmpty()) {
+            throw new ChatException(ChatErrorCode.AUDIO_FILE_EMPTY);
+        }
+        validateSessionOwnership(userId, sessionId);
+
+        String requestId = sessionIdGenerator.generate();
+        String traceId = sessionIdGenerator.generate();
+        List<ChatbotContextMessage> context = chatSessionRepository
+                .findRecentContext(sessionId, CONTEXT_LIMIT)
+                .stream()
+                .map(ChatbotContextMessage::from)
+                .toList();
+        ChatbotAudioQueryRequest chatbotRequest = new ChatbotAudioQueryRequest(
+                requestId,
+                sessionId,
+                userId,
+                context,
+                CHATBOT_TIMEOUT_MS
+        );
+
+        ChatbotAudioQueryResponse chatbotResponse = chatbotClient
+                .queryAudio(chatbotRequest, audio, traceId);
+        validateAudioChatbotResponse(chatbotResponse);
+        if (chatbotResponse.status() == ChatbotResponseStatus.COMPLETED) {
+            chatSessionRepository.saveCompletedExchange(
+                    sessionId,
+                    ChatContextMessage.user(chatbotResponse.transcription()),
+                    ChatContextMessage.assistant(chatbotResponse.answer()),
+                    SESSION_TTL,
+                    CONTEXT_LIMIT
+            );
+        }
+
+        return ChatAudioQueryResponse.from(requestId, sessionId, traceId, chatbotResponse);
+    }
+
     private void validateChatbotResponse(ChatbotQueryResponse response) {
         if (response == null
                 || response.status() == null
                 || response.answer() == null
                 || response.answer().isBlank()
                 || response.suggestions() == null
-                || response.suggestions().isEmpty()
                 || response.suggestions().stream().anyMatch(suggestion -> suggestion == null || suggestion.isBlank())) {
+            throw new ChatException(ChatErrorCode.CHATBOT_INVALID_RESPONSE);
+        }
+    }
+
+    private void validateAudioChatbotResponse(ChatbotAudioQueryResponse response) {
+        if (response == null
+                || response.transcription() == null
+                || response.transcription().isBlank()) {
+            throw new ChatException(ChatErrorCode.STT_INVALID_RESPONSE);
+        }
+        if (response.status() == null
+                || response.answer() == null
+                || response.answer().isBlank()
+                || response.suggestions() == null
+                || response.suggestions().isEmpty()
+                || response.suggestions().stream()
+                        .anyMatch(suggestion -> suggestion == null || suggestion.isBlank())) {
             throw new ChatException(ChatErrorCode.CHATBOT_INVALID_RESPONSE);
         }
     }

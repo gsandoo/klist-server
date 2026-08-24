@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,10 +14,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.kk.klist.domain.auth.service.CustomOAuth2UserService;
 import com.kk.klist.domain.chat.domain.exception.ChatErrorCode;
 import com.kk.klist.domain.chat.domain.exception.ChatException;
-import com.kk.klist.domain.chat.dto.response.ChatSessionCreateResponse;
-import com.kk.klist.domain.chat.dto.request.ChatQueryRequest;
-import com.kk.klist.domain.chat.dto.response.ChatQueryResponse;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotResponseStatus;
+import com.kk.klist.domain.chat.dto.request.ChatQueryRequest;
+import com.kk.klist.domain.chat.dto.response.ChatAudioQueryResponse;
+import com.kk.klist.domain.chat.dto.response.ChatQueryResponse;
+import com.kk.klist.domain.chat.dto.response.ChatSessionCreateResponse;
 import com.kk.klist.domain.chat.service.ChatService;
 import com.kk.klist.global.security.config.SecurityConfig;
 import com.kk.klist.global.security.auth.CustomUserDetails;
@@ -37,6 +39,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -193,6 +196,59 @@ class ChatControllerTest {
                         .content("{\"sessionId\":\"session-id\",\"message\":\"" + message + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("G002"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/chat/query/audio에 음성을 전송하면 변환된 질문과 답변을 200으로 반환한다")
+    void queryAudio_whenMultipartRequestValid_returns200WithTranscription() throws Exception {
+        // given
+        Long userId = 1L;
+        MockMultipartFile audio = new MockMultipartFile(
+                "audio", "question.webm", "audio/webm", "audio-data".getBytes());
+        ChatAudioQueryResponse response = new ChatAudioQueryResponse(
+                "request-id",
+                "session-id",
+                "trace-id",
+                ChatbotResponseStatus.COMPLETED,
+                "서울 관광지를 추천해줘",
+                "경복궁을 추천합니다.",
+                List.of("주변 맛집도 알려줘")
+        );
+        given(chatService.queryAudio(userId, "session-id", audio)).willReturn(response);
+
+        // when & then
+        mockMvc.perform(multipart("/api/v1/chat/query/audio")
+                        .file(audio)
+                        .param("sessionId", "session-id")
+                        .with(authentication(createAuthentication(userId)))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.requestId").value("request-id"))
+                .andExpect(jsonPath("$.data.sessionId").value("session-id"))
+                .andExpect(jsonPath("$.data.traceId").value("trace-id"))
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.transcription").value("서울 관광지를 추천해줘"))
+                .andExpect(jsonPath("$.data.answer").value("경복궁을 추천합니다."))
+                .andExpect(jsonPath("$.data.suggestions[0]").value("주변 맛집도 알려줘"));
+        then(chatService).should(times(1)).queryAudio(userId, "session-id", audio);
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/chat/query/audio에 음성 파일이 없으면 400을 반환한다")
+    void queryAudio_whenAudioMissing_returns400() throws Exception {
+        // given
+        given(chatService.queryAudio(1L, "session-id", null))
+                .willThrow(new ChatException(ChatErrorCode.AUDIO_FILE_EMPTY));
+
+        // when & then
+        mockMvc.perform(multipart("/api/v1/chat/query/audio")
+                        .param("sessionId", "session-id")
+                        .with(authentication(createAuthentication(1L)))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("CHAT_AUDIO_FILE_EMPTY"));
     }
 
     private UsernamePasswordAuthenticationToken createAuthentication(Long userId) {

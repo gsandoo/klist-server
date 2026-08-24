@@ -2,6 +2,7 @@ package com.kk.klist.domain.chat.controller;
 
 import com.kk.klist.domain.chat.dto.response.ChatSessionCreateResponse;
 import com.kk.klist.domain.chat.dto.request.ChatQueryRequest;
+import com.kk.klist.domain.chat.dto.response.ChatAudioQueryResponse;
 import com.kk.klist.domain.chat.dto.response.ChatQueryResponse;
 import com.kk.klist.domain.chat.service.ChatService;
 import com.kk.klist.global.response.ApiResponse;
@@ -13,7 +14,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/chat")
@@ -36,6 +40,16 @@ public class ChatController {
             @Valid @RequestBody ChatQueryRequest request
     ) {
         ChatQueryResponse response = chatService.query(userId, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping(value = "/query/audio", consumes = "multipart/form-data")
+    public ResponseEntity<ApiResponse<ChatAudioQueryResponse>> queryAudio(
+            @LoginUser Long userId,
+            @RequestParam String sessionId,
+            @RequestPart(required = false) MultipartFile audio
+    ) {
+        ChatAudioQueryResponse response = chatService.queryAudio(userId, sessionId, audio);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
