@@ -16,7 +16,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * 유효한 토큰이 있으면 SecurityContext를 채우고, 없거나 무효하면 그대로 통과시킨다.
  * 인증 필요 여부 판단은 {@code @LoginUser}(LoginUserArgumentResolver)가 담당한다.
- * SecurityConfig 필터 체인 등록 및 DebugAuthFilter 제거는 SRV-8에서 처리한다.
  */
 @Component
 @RequiredArgsConstructor

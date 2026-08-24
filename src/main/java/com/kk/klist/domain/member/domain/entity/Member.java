@@ -49,19 +49,32 @@ public class Member extends BaseTimeEntity {
     @Column
     private String profileImageUrl;
 
+    @Column
+    private String refreshTokenId;
+
     @Builder
-    private Member(String nickname, OAuthProvider oauthProvider, String oauthId) {
+    private Member(String nickname, OAuthProvider oauthProvider, String oauthId, String profileImageUrl) {
         this.nickname = nickname;
         this.role = Role.USER;
         this.oauthProvider = oauthProvider;
         this.oauthId = oauthId;
+        this.profileImageUrl = profileImageUrl;
     }
 
-    public static Member create(String nickname, OAuthProvider oauthProvider, String oauthId) {
+    public static Member create(String nickname, OAuthProvider oauthProvider, String oauthId, String profileImageUrl) {
         return Member.builder()
                 .nickname(nickname)
                 .oauthProvider(oauthProvider)
                 .oauthId(oauthId)
+                .profileImageUrl(profileImageUrl)
                 .build();
+    }
+
+    public void updateRefreshToken(String tokenId) {
+        this.refreshTokenId = tokenId;
+    }
+
+    public void clearRefreshToken() {
+        this.refreshTokenId = null;
     }
 }
