@@ -59,6 +59,16 @@ public enum ChatErrorCode implements ErrorCode {
             "CHATBOT_INVALID_RESPONSE",
             "Chatbot 서버가 올바르지 않은 응답을 반환했습니다."
     ),
+    AUDIO_FILE_EMPTY(
+            HttpStatus.BAD_REQUEST,
+            "CHAT_AUDIO_FILE_EMPTY",
+            "음성 파일은 필수입니다."
+    ),
+    STT_INVALID_RESPONSE(
+            HttpStatus.BAD_GATEWAY,
+            "STT_INVALID_RESPONSE",
+            "음성을 텍스트로 변환하지 못했습니다."
+    ),
     SESSION_STORAGE_UNAVAILABLE(
             HttpStatus.SERVICE_UNAVAILABLE,
             "CHAT_SESSION_STORAGE_UNAVAILABLE",

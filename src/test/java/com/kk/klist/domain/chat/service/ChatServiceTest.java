@@ -12,10 +12,13 @@ import com.kk.klist.domain.chat.domain.ChatContextMessage;
 import com.kk.klist.domain.chat.domain.exception.ChatErrorCode;
 import com.kk.klist.domain.chat.domain.exception.ChatException;
 import com.kk.klist.domain.chat.dto.response.ChatSessionCreateResponse;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotAudioQueryRequest;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotAudioQueryResponse;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryRequest;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryResponse;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotResponseStatus;
 import com.kk.klist.domain.chat.dto.request.ChatQueryRequest;
+import com.kk.klist.domain.chat.dto.response.ChatAudioQueryResponse;
 import com.kk.klist.domain.chat.dto.response.ChatQueryResponse;
 import com.kk.klist.domain.chat.repository.ChatSessionRepository;
 import com.kk.klist.global.util.TimeProvider;
@@ -31,6 +34,7 @@ import org.mockito.InjectMocks;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 
 @ExtendWith(MockitoExtension.class)
 class ChatServiceTest {
@@ -369,6 +373,110 @@ class ChatServiceTest {
                 .isInstanceOf(ChatException.class);
         then(chatSessionRepository).should(never()).findRecentContext(
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt());
+        then(chatbotClient).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("음성 질문이 완료되면 변환된 텍스트와 답변을 저장하고 응답한다")
+    void queryAudio_whenChatbotCompleted_savesTranscriptionAndReturnsResponse() {
+        // given
+        Long userId = 1L;
+        String sessionId = "session-id";
+        MockMultipartFile audio = new MockMultipartFile(
+                "audio", "question.webm", "audio/webm", "audio-data".getBytes());
+        given(chatSessionRepository.findOwner(sessionId)).willReturn(Optional.of(userId));
+        given(sessionIdGenerator.generate()).willReturn("request-id", "trace-id");
+        given(chatSessionRepository.findRecentContext(sessionId, ChatService.CONTEXT_LIMIT))
+                .willReturn(List.of(ChatContextMessage.user("이전 질문")));
+        given(chatbotClient.queryAudio(
+                org.mockito.ArgumentMatchers.any(ChatbotAudioQueryRequest.class),
+                org.mockito.ArgumentMatchers.eq(audio),
+                org.mockito.ArgumentMatchers.eq("trace-id")))
+                .willReturn(new ChatbotAudioQueryResponse(
+                        ChatbotResponseStatus.COMPLETED,
+                        "서울 관광지를 추천해줘",
+                        "경복궁을 추천합니다.",
+                        List.of("주변 맛집도 알려줘")
+                ));
+
+        // when
+        ChatAudioQueryResponse response = chatService.queryAudio(userId, sessionId, audio);
+
+        // then
+        assertThat(response.requestId()).isEqualTo("request-id");
+        assertThat(response.traceId()).isEqualTo("trace-id");
+        assertThat(response.transcription()).isEqualTo("서울 관광지를 추천해줘");
+        assertThat(response.answer()).isEqualTo("경복궁을 추천합니다.");
+
+        ArgumentCaptor<ChatbotAudioQueryRequest> requestCaptor =
+                ArgumentCaptor.forClass(ChatbotAudioQueryRequest.class);
+        then(chatbotClient).should(times(1))
+                .queryAudio(requestCaptor.capture(),
+                        org.mockito.ArgumentMatchers.eq(audio),
+                        org.mockito.ArgumentMatchers.eq("trace-id"));
+        assertThat(requestCaptor.getValue().requestId()).isEqualTo("request-id");
+        assertThat(requestCaptor.getValue().sessionId()).isEqualTo(sessionId);
+        assertThat(requestCaptor.getValue().userId()).isEqualTo(userId);
+        assertThat(requestCaptor.getValue().context()).extracting("content")
+                .containsExactly("이전 질문");
+        then(chatSessionRepository).should(times(1)).saveCompletedExchange(
+                sessionId,
+                ChatContextMessage.user("서울 관광지를 추천해줘"),
+                ChatContextMessage.assistant("경복궁을 추천합니다."),
+                ChatService.SESSION_TTL,
+                ChatService.CONTEXT_LIMIT
+        );
+    }
+
+    @Test
+    @DisplayName("음성 질문 응답의 transcription이 비어 있으면 STT 응답 오류가 발생된다")
+    void queryAudio_whenTranscriptionBlank_throwsSttInvalidResponse() {
+        // given
+        String sessionId = "session-id";
+        MockMultipartFile audio = new MockMultipartFile(
+                "audio", "question.webm", "audio/webm", "audio-data".getBytes());
+        given(chatSessionRepository.findOwner(sessionId)).willReturn(Optional.of(1L));
+        given(sessionIdGenerator.generate()).willReturn("request-id", "trace-id");
+        given(chatSessionRepository.findRecentContext(sessionId, ChatService.CONTEXT_LIMIT))
+                .willReturn(List.of());
+        given(chatbotClient.queryAudio(
+                org.mockito.ArgumentMatchers.any(ChatbotAudioQueryRequest.class),
+                org.mockito.ArgumentMatchers.eq(audio),
+                org.mockito.ArgumentMatchers.eq("trace-id")))
+                .willReturn(new ChatbotAudioQueryResponse(
+                        ChatbotResponseStatus.COMPLETED,
+                        " ",
+                        "답변",
+                        List.of("후속 질문")
+                ));
+
+        // when & then
+        assertThatThrownBy(() -> chatService.queryAudio(1L, sessionId, audio))
+                .isInstanceOf(ChatException.class)
+                .satisfies(error -> assertThat(((ChatException) error).getErrorCode())
+                        .isEqualTo(ChatErrorCode.STT_INVALID_RESPONSE));
+        then(chatSessionRepository).should(never()).saveCompletedExchange(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyInt()
+        );
+    }
+
+    @Test
+    @DisplayName("빈 음성 파일이면 세션과 Chatbot을 조회하지 않고 요청 오류가 발생된다")
+    void queryAudio_whenAudioEmpty_throwsAudioFileEmpty() {
+        // given
+        MockMultipartFile audio = new MockMultipartFile(
+                "audio", "question.webm", "audio/webm", new byte[0]);
+
+        // when & then
+        assertThatThrownBy(() -> chatService.queryAudio(1L, "session-id", audio))
+                .isInstanceOf(ChatException.class)
+                .satisfies(error -> assertThat(((ChatException) error).getErrorCode())
+                        .isEqualTo(ChatErrorCode.AUDIO_FILE_EMPTY));
+        then(chatSessionRepository).shouldHaveNoInteractions();
         then(chatbotClient).shouldHaveNoInteractions();
     }
 }

@@ -4,19 +4,28 @@ import com.kk.klist.domain.chat.domain.exception.ChatErrorCode;
 import com.kk.klist.domain.chat.domain.exception.ChatException;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryRequest;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryResponse;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotAudioQueryRequest;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotAudioQueryResponse;
 import java.io.InterruptedIOException;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.multipart.MultipartFile;
 
 @Component
+@Slf4j
 public class RestChatbotClient implements ChatbotClient {
 
     private static final String QUERY_PATH = "/internal/chat/query";
+    private static final String AUDIO_QUERY_PATH = "/internal/chat/query/audio";
     private static final String INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key";
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
@@ -41,6 +50,59 @@ public class RestChatbotClient implements ChatbotClient {
                     .body(request)
                     .retrieve()
                     .body(ChatbotQueryResponse.class);
+            String raw = chatbotRestClient.post()
+                    .uri(QUERY_PATH)
+                    .header(INTERNAL_API_KEY_HEADER, internalApiKey)
+                    .header(TRACE_ID_HEADER, traceId)
+                    .body(request)
+                    .retrieve()
+                    .body(String.class);
+
+            log.info("chatbot raw response={}", raw);
+            if (response == null || response.status() == null) {
+                throw new ChatException(ChatErrorCode.CHATBOT_INVALID_RESPONSE);
+            }
+            return response;
+        } catch (ChatException e) {
+            throw e;
+        } catch (HttpStatusCodeException e) {
+            throw new ChatException(mapStatus(e.getStatusCode()));
+        } catch (ResourceAccessException e) {
+            if (hasSocketTimeoutCause(e)) {
+                throw new ChatException(ChatErrorCode.CHATBOT_TIMEOUT);
+            }
+            throw new ChatException(ChatErrorCode.CHATBOT_API_ERROR);
+        } catch (RestClientException e) {
+            if (hasSocketTimeoutCause(e)) {
+                throw new ChatException(ChatErrorCode.CHATBOT_TIMEOUT);
+            }
+            throw new ChatException(ChatErrorCode.CHATBOT_API_ERROR);
+        }
+    }
+
+    @Override
+    public ChatbotAudioQueryResponse queryAudio(
+            ChatbotAudioQueryRequest request,
+            MultipartFile audio,
+            String traceId
+    ) {
+        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+        bodyBuilder.part("request", request).contentType(MediaType.APPLICATION_JSON);
+        bodyBuilder.part("audio", audio.getResource())
+                .filename(audio.getOriginalFilename() == null ? "audio" : audio.getOriginalFilename())
+                .contentType(audio.getContentType() == null
+                        ? MediaType.APPLICATION_OCTET_STREAM
+                        : MediaType.parseMediaType(audio.getContentType()));
+
+        try {
+            ChatbotAudioQueryResponse response = chatbotRestClient.post()
+                    .uri(AUDIO_QUERY_PATH)
+                    .header(INTERNAL_API_KEY_HEADER, internalApiKey)
+                    .header(TRACE_ID_HEADER, traceId)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(bodyBuilder.build())
+                    .retrieve()
+                    .body(ChatbotAudioQueryResponse.class);
             if (response == null || response.status() == null) {
                 throw new ChatException(ChatErrorCode.CHATBOT_INVALID_RESPONSE);
             }
