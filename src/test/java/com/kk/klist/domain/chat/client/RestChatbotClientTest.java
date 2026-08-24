@@ -13,6 +13,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import com.kk.klist.domain.chat.domain.exception.ChatErrorCode;
 import com.kk.klist.domain.chat.domain.exception.ChatException;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotContextMessage;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotAudioQueryRequest;
+import com.kk.klist.domain.chat.dto.chatbot.ChatbotAudioQueryResponse;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryRequest;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotQueryResponse;
 import com.kk.klist.domain.chat.dto.chatbot.ChatbotResponseStatus;
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.client.RestClient;
 
 class RestChatbotClientTest {
@@ -86,5 +89,43 @@ class RestChatbotClientTest {
                 .isInstanceOf(ChatException.class)
                 .satisfies(error -> assertThat(((ChatException) error).getErrorCode())
                         .isEqualTo(ChatErrorCode.CHATBOT_INTERNAL_ERROR));
+    }
+
+    @Test
+    @DisplayName("Chatbot 음성 API에 요청 정보와 음성 파일을 multipart로 전달한다")
+    void queryAudio_whenChatbotResponds_returnsTranscription() {
+        // given
+        ChatbotAudioQueryRequest request = new ChatbotAudioQueryRequest(
+                "request-id",
+                "session-id",
+                1L,
+                List.of(new ChatbotContextMessage(ChatMessageRole.USER, "이전 질문")),
+                5000L
+        );
+        MockMultipartFile audio = new MockMultipartFile(
+                "audio", "question.webm", "audio/webm", "audio-data".getBytes());
+        server.expect(once(), requestTo("http://chatbot/internal/chat/query/audio"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("X-Internal-Api-Key", "internal-key"))
+                .andExpect(header("X-Trace-Id", "trace-id"))
+                .andExpect(header("Content-Type", org.hamcrest.Matchers.containsString("multipart/form-data")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"request\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"requestId\":\"request-id\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("filename=\"question.webm\"")))
+                .andRespond(withSuccess(
+                        "{\"status\":\"COMPLETED\",\"transcription\":\"서울 관광지를 추천해줘\"," +
+                                "\"answer\":\"경복궁을 추천합니다.\"," +
+                                "\"suggestions\":[\"주변 맛집도 알려줘\"]}",
+                        MediaType.APPLICATION_JSON
+                ));
+
+        // when
+        ChatbotAudioQueryResponse response = chatbotClient.queryAudio(request, audio, "trace-id");
+
+        // then
+        assertThat(response.status()).isEqualTo(ChatbotResponseStatus.COMPLETED);
+        assertThat(response.transcription()).isEqualTo("서울 관광지를 추천해줘");
+        assertThat(response.answer()).isEqualTo("경복궁을 추천합니다.");
+        server.verify();
     }
 }
