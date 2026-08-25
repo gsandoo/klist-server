@@ -1,5 +1,6 @@
 package com.kk.klist.domain.auth.controller;
 
+import com.kk.klist.domain.auth.dto.request.OnboardingRequest;
 import com.kk.klist.domain.auth.dto.request.RefreshRequest;
 import com.kk.klist.domain.auth.dto.response.TokenResponse;
 import com.kk.klist.domain.auth.service.AuthService;
@@ -7,9 +8,12 @@ import com.kk.klist.global.response.ApiResponse;
 import com.kk.klist.global.security.auth.LoginUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -28,5 +32,11 @@ public class AuthController {
     public ApiResponse<Void> logout(@LoginUser Long memberId) {
         authService.logout(memberId);
         return ApiResponse.success();
+    }
+
+    @PatchMapping("/onboarding")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void onboarding(@LoginUser Long memberId, @Valid @RequestBody OnboardingRequest request) {
+        authService.completeOnboarding(memberId, request);
     }
 }

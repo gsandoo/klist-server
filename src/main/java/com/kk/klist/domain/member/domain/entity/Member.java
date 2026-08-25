@@ -26,7 +26,7 @@ public class Member extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column
     private String nickname;
 
     @Enumerated(EnumType.STRING)
@@ -49,6 +49,9 @@ public class Member extends BaseTimeEntity {
     @Column
     private String profileImageUrl;
 
+    @Column(nullable = false)
+    private boolean isOnboarding = false;
+
     @Column
     private String refreshTokenId;
 
@@ -68,6 +71,14 @@ public class Member extends BaseTimeEntity {
                 .oauthId(oauthId)
                 .profileImageUrl(profileImageUrl)
                 .build();
+    }
+
+    public void completeOnboarding(String nickname, String profileImageUrl, String preferredLanguage, String nationality) {
+        this.nickname = nickname;
+        this.profileImageUrl = profileImageUrl;
+        this.preferredLanguage = preferredLanguage;
+        this.nationality = nationality;
+        this.isOnboarding = true;
     }
 
     public void updateRefreshToken(String tokenId) {
