@@ -46,7 +46,7 @@ public class Member extends BaseTimeEntity {
     @Column
     private String preferredLanguage;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String profileImageUrl;
 
     @Column(nullable = false)
