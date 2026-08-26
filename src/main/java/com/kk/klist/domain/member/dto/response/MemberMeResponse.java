@@ -7,15 +7,19 @@ public record MemberMeResponse(
         Long id,
         String nickname,
         String nationality,
+        String preferredLanguage,
         String profileImageUrl,
-        Role role) {
+        Role role,
+        boolean isOnboarding) {
 
     public static MemberMeResponse from(Member member) {
         return new MemberMeResponse(
                 member.getId(),
                 member.getNickname(),
                 member.getNationality(),
+                member.getPreferredLanguage(),
                 member.getProfileImageUrl(),
-                member.getRole());
+                member.getRole(),
+                member.isOnboarding());
     }
 }

@@ -6,6 +6,7 @@ import com.kk.klist.domain.member.service.MemberService;
 import com.kk.klist.global.response.ApiResponse;
 import com.kk.klist.global.security.auth.LoginUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,8 +19,8 @@ public class MemberController {
     private final MemberService memberService;
 
     @GetMapping("/me")
-    public ApiResponse<MemberMeResponse> me(@LoginUser Long memberId) {
+    public ResponseEntity<ApiResponse<MemberMeResponse>> me(@LoginUser Long memberId) {
         Member member = memberService.getById(memberId);
-        return ApiResponse.success(MemberMeResponse.from(member));
+        return ResponseEntity.ok(ApiResponse.success(MemberMeResponse.from(member)));
     }
 }

@@ -2,6 +2,8 @@ package com.kk.klist.domain.member.service;
 
 import com.kk.klist.domain.member.domain.entity.Member;
 import com.kk.klist.domain.member.domain.entity.OAuthProvider;
+import com.kk.klist.domain.member.domain.exception.MemberErrorCode;
+import com.kk.klist.domain.member.domain.exception.MemberException;
 import com.kk.klist.domain.member.repository.MemberRepository;
 import com.kk.klist.global.exception.AuthErrorCode;
 import com.kk.klist.global.exception.AuthException;
@@ -29,5 +31,15 @@ public class MemberService {
                 .orElseGet(() -> new MemberUpsertResult(
                         memberRepository.save(Member.create(nickname, oauthProvider, oauthId, profileImageUrl)),
                         true));
+    }
+
+    @Transactional
+    public void completeOnboarding(Long memberId, String nickname, String profileImageUrl,
+                                   String preferredLanguage, String nationality) {
+        Member member = getById(memberId);
+        if (member.isOnboarding()) {
+            throw new MemberException(MemberErrorCode.ONBOARDING_ALREADY_COMPLETED);
+        }
+        member.completeOnboarding(nickname, profileImageUrl, preferredLanguage, nationality);
     }
 }

@@ -28,11 +28,11 @@ public class KakaoOAuthUserInfo implements OAuthUserInfo {
 
     @Override
     public String getNickname() {
-        return (String) profile.get("nickname");
+        return null;
     }
 
     @Override
     public String getProfileImageUrl() {
-        return (String) profile.get("profile_image_url");
+        return null;
     }
 }
