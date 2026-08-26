@@ -81,6 +81,19 @@ public class Member extends BaseTimeEntity {
         this.isOnboarding = true;
     }
 
+    public void updateProfile(String nickname, String nationality) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (nationality != null) {
+            this.nationality = nationality;
+        }
+    }
+
+    public void updateProfileImage(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
     public void updateRefreshToken(String tokenId) {
         this.refreshTokenId = tokenId;
     }
