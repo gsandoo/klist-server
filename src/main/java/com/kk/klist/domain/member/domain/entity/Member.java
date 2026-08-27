@@ -46,7 +46,7 @@ public class Member extends BaseTimeEntity {
     @Column
     private String preferredLanguage;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String profileImageUrl;
 
     @Column(nullable = false)
@@ -79,6 +79,19 @@ public class Member extends BaseTimeEntity {
         this.preferredLanguage = preferredLanguage;
         this.nationality = nationality;
         this.isOnboarding = true;
+    }
+
+    public void updateProfile(String nickname, String nationality) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (nationality != null) {
+            this.nationality = nationality;
+        }
+    }
+
+    public void updateProfileImage(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 
     public void updateRefreshToken(String tokenId) {

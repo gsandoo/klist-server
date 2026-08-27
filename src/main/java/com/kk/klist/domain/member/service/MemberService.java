@@ -42,4 +42,17 @@ public class MemberService {
         }
         member.completeOnboarding(nickname, profileImageUrl, preferredLanguage, nationality);
     }
+
+    @Transactional
+    public void updateProfile(Long memberId, String nickname, String nationality) {
+        Member member = getById(memberId);
+        member.updateProfile(nickname, nationality);
+    }
+
+    @Transactional
+    public String updateProfileImage(Long memberId, String profileImageUrl) {
+        Member member = getById(memberId);
+        member.updateProfileImage(profileImageUrl);
+        return member.getProfileImageUrl();
+    }
 }
