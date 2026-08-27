@@ -43,6 +43,7 @@ tour:
 
 kakao:
   rest-key: ${KAKAO_REST_KEY:}
+  admin-key: ${KAKAO_ADMIN_KEY:}
   local:
     base-url: https://dapi.kakao.com
   mobility:
