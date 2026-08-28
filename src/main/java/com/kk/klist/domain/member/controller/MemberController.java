@@ -3,6 +3,7 @@ package com.kk.klist.domain.member.controller;
 import com.kk.klist.domain.member.dto.request.PreferredLanguageUpdateRequest;
 import com.kk.klist.domain.member.dto.request.ProfileImageUpdateRequest;
 import com.kk.klist.domain.member.dto.request.ProfileUpdateRequest;
+import com.kk.klist.domain.member.dto.request.WithdrawRequest;
 import com.kk.klist.domain.member.dto.response.MemberMeResponse;
 import com.kk.klist.domain.member.dto.response.ProfileImageUpdateResponse;
 import com.kk.klist.domain.member.domain.entity.Member;
@@ -12,6 +13,7 @@ import com.kk.klist.global.security.auth.LoginUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -53,6 +55,14 @@ public class MemberController {
             @LoginUser Long memberId,
             @Valid @RequestBody PreferredLanguageUpdateRequest request) {
         memberService.updatePreferredLanguage(memberId, request.preferredLanguage());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> withdraw(
+            @LoginUser Long memberId,
+            @Valid @RequestBody WithdrawRequest request) {
+        memberService.withdraw(memberId, request.reasons());
         return ResponseEntity.noContent().build();
     }
 }

@@ -52,6 +52,9 @@ public class Member extends BaseTimeEntity {
     @Column(nullable = false)
     private boolean isOnboarding = false;
 
+    @Column(nullable = false)
+    private boolean isActive = true;
+
     @Column
     private String refreshTokenId;
 
@@ -103,6 +106,11 @@ public class Member extends BaseTimeEntity {
     }
 
     public void clearRefreshToken() {
+        this.refreshTokenId = null;
+    }
+
+    public void withdraw() {
+        this.isActive = false;
         this.refreshTokenId = null;
     }
 }
