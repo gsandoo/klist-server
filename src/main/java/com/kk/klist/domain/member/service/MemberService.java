@@ -40,7 +40,13 @@ public class MemberService {
     public MemberUpsertResult upsertMember(
             OAuthProvider oauthProvider, String oauthId, String nickname, String profileImageUrl) {
         return memberRepository.findByOauthProviderAndOauthId(oauthProvider, oauthId)
-                .map(member -> new MemberUpsertResult(member, false))
+                .map(member -> {
+                    if (!member.isActive()) {
+                        member.reactivate();
+                        return new MemberUpsertResult(member, true);
+                    }
+                    return new MemberUpsertResult(member, false);
+                })
                 .orElseGet(() -> new MemberUpsertResult(
                         memberRepository.save(Member.create(nickname, oauthProvider, oauthId, profileImageUrl)),
                         true));
