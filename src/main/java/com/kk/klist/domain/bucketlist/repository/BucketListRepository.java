@@ -19,4 +19,8 @@ public interface BucketListRepository {
     long countCompletedInPeriod(Long memberId, LocalDateTime start, LocalDateTime end);
 
     List<BucketList> findAllCompletedInPeriod(Long memberId, LocalDateTime start, LocalDateTime end);
+
+    long countByMemberId(Long memberId);
+
+    long countByMemberIdAndCompletedTrue(Long memberId);
 }

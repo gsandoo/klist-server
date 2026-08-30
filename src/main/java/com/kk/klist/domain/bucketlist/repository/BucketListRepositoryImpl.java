@@ -45,6 +45,16 @@ public class BucketListRepositoryImpl implements BucketListRepository {
     }
 
     @Override
+    public long countByMemberId(Long memberId) {
+        return bucketListJpaRepository.countByMemberId(memberId);
+    }
+
+    @Override
+    public long countByMemberIdAndCompletedTrue(Long memberId) {
+        return bucketListJpaRepository.countByMemberIdAndCompletedTrue(memberId);
+    }
+
+    @Override
     public Page<BucketList> searchBucketList(BucketListSearchCondition condition) {
         CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
         CriteriaQuery<BucketList> contentQuery = criteriaBuilder.createQuery(BucketList.class);

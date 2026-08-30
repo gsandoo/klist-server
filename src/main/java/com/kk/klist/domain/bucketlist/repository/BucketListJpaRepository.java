@@ -10,4 +10,8 @@ public interface BucketListJpaRepository extends JpaRepository<BucketList, Long>
     @Override
     @EntityGraph(attributePaths = "category")
     Optional<BucketList> findById(Long bucketListId);
+
+    long countByMemberId(Long memberId);
+
+    long countByMemberIdAndCompletedTrue(Long memberId);
 }

@@ -5,6 +5,7 @@ import com.kk.klist.domain.bucketlist.dto.request.BucketListCompletionUpdateRequ
 import com.kk.klist.domain.bucketlist.dto.request.BucketListUpdateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListProgressResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
 import com.kk.klist.domain.bucketlist.service.BucketListService;
 import com.kk.klist.global.response.ApiResponse;
@@ -63,6 +64,14 @@ public class BucketListController {
     ) {
         bucketListService.deleteBucketList(userId, bucketListId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/progress")
+    public ResponseEntity<ApiResponse<BucketListProgressResponse>> getBucketListProgress(
+            @LoginUser Long userId
+    ) {
+        BucketListProgressResponse response = bucketListService.getBucketListProgress(userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/{bucketListId}")
