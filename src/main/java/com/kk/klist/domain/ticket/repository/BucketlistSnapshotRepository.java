@@ -6,4 +6,6 @@ import java.util.List;
 public interface BucketlistSnapshotRepository {
 
     List<BucketlistSnapshot> saveAll(List<BucketlistSnapshot> snapshots);
+
+    List<BucketlistSnapshot> findAllByTicketId(Long ticketId);
 }

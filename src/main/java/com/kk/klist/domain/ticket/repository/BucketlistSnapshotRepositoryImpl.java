@@ -15,4 +15,9 @@ public class BucketlistSnapshotRepositoryImpl implements BucketlistSnapshotRepos
     public List<BucketlistSnapshot> saveAll(List<BucketlistSnapshot> snapshots) {
         return bucketlistSnapshotJpaRepository.saveAll(snapshots);
     }
+
+    @Override
+    public List<BucketlistSnapshot> findAllByTicketId(Long ticketId) {
+        return bucketlistSnapshotJpaRepository.findAllByTicketId(ticketId);
+    }
 }

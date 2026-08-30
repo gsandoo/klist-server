@@ -33,21 +33,27 @@ public class BucketlistSnapshot {
     @Column(nullable = false)
     private LocalDateTime completedAt;
 
+    @Column(nullable = false, length = 30)
+    private String categoryCode;
+
     @Builder
-    private BucketlistSnapshot(Long ticketId, Long originBucketlistId, String title, LocalDateTime completedAt) {
+    private BucketlistSnapshot(Long ticketId, Long originBucketlistId, String title,
+            LocalDateTime completedAt, String categoryCode) {
         this.ticketId = ticketId;
         this.originBucketlistId = originBucketlistId;
         this.title = title;
         this.completedAt = completedAt;
+        this.categoryCode = categoryCode;
     }
 
     public static BucketlistSnapshot create(Long ticketId, Long originBucketlistId, String title,
-            LocalDateTime completedAt) {
+            LocalDateTime completedAt, String categoryCode) {
         return BucketlistSnapshot.builder()
                 .ticketId(ticketId)
                 .originBucketlistId(originBucketlistId)
                 .title(title)
                 .completedAt(completedAt)
+                .categoryCode(categoryCode)
                 .build();
     }
 }

@@ -52,7 +52,8 @@ public class TicketService {
         Ticket ticket = ticketRepository.save(Ticket.create(memberId, startDate, endDate, visitCount));
 
         List<BucketlistSnapshot> snapshots = completedBucketLists.stream()
-                .map(bl -> BucketlistSnapshot.create(ticket.getId(), bl.getId(), bl.getTitle(), bl.getCompletedAt()))
+                .map(bl -> BucketlistSnapshot.create(ticket.getId(), bl.getId(), bl.getTitle(),
+                        bl.getCompletedAt(), bl.getCategory().getCode()))
                 .toList();
         bucketlistSnapshotRepository.saveAll(snapshots);
 
@@ -61,7 +62,9 @@ public class TicketService {
 
     public List<TicketSummaryResponse> findTickets(Long memberId) {
         return ticketRepository.findAllByMemberIdOrderByCreatedAtDesc(memberId).stream()
-                .map(TicketSummaryResponse::from)
+                .map(ticket -> TicketSummaryResponse.from(
+                        ticket,
+                        bucketlistSnapshotRepository.findAllByTicketId(ticket.getId())))
                 .toList();
     }
 
