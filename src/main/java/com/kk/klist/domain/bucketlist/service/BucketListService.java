@@ -17,6 +17,9 @@ import com.kk.klist.global.response.PageResponse;
 import com.kk.klist.global.util.TimeProvider;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -98,6 +101,18 @@ public class BucketListService {
     public void deleteBucketList(Long memberId, Long bucketListId) {
         BucketList bucketList = findOwnedBucketList(memberId, bucketListId);
         bucketListRepository.delete(bucketList);
+    }
+
+    public long countCompletedInPeriod(Long memberId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        return bucketListRepository.countCompletedInPeriod(memberId, start, end);
+    }
+
+    public List<BucketList> findAllCompletedInPeriod(Long memberId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        return bucketListRepository.findAllCompletedInPeriod(memberId, start, end);
     }
 
     @Transactional
