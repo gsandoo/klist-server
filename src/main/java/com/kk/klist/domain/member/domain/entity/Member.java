@@ -113,4 +113,9 @@ public class Member extends BaseTimeEntity {
         this.isActive = false;
         this.refreshTokenId = null;
     }
+
+    public void reactivate() {
+        this.isActive = true;
+        this.isOnboarding = false;
+    }
 }
