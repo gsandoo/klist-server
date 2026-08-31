@@ -6,13 +6,16 @@ import com.kk.klist.domain.bucketlist.dto.request.BucketListUpdateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListProgressResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListRecommendationResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
+import com.kk.klist.domain.bucketlist.service.BucketListRecommendationService;
 import com.kk.klist.domain.bucketlist.service.BucketListService;
 import com.kk.klist.global.response.ApiResponse;
 import com.kk.klist.global.response.PageResponse;
 import com.kk.klist.global.security.auth.LoginUser;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +39,17 @@ public class BucketListController {
     private static final int DEFAULT_PAGE_SIZE = 10;
 
     private final BucketListService bucketListService;
+    private final BucketListRecommendationService bucketListRecommendationService;
+
+    @GetMapping("/recommendations")
+    public ResponseEntity<ApiResponse<List<BucketListRecommendationResponse>>> findRecommendations(
+            @RequestParam double latitude,
+            @RequestParam double longitude
+    ) {
+        List<BucketListRecommendationResponse> response =
+                bucketListRecommendationService.findRecommendations(latitude, longitude);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     @PatchMapping("/{bucketListId}/completion")
     public ResponseEntity<Void> updateBucketListCompletion(

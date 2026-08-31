@@ -19,11 +19,13 @@ import com.kk.klist.domain.bucketlist.dto.request.BucketListCompletionUpdateRequ
 import com.kk.klist.domain.bucketlist.dto.request.BucketListUpdateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListRecommendationResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListErrorCode;
 import com.kk.klist.domain.bucketlist.domain.exception.BucketListException;
 import com.kk.klist.domain.bucketlist.fixture.BucketListFixture;
 import com.kk.klist.domain.bucketlist.service.BucketListService;
+import com.kk.klist.domain.bucketlist.service.BucketListRecommendationService;
 import com.kk.klist.global.response.PageResponse;
 import com.kk.klist.global.security.auth.CustomUserDetails;
 import com.kk.klist.global.security.auth.Role;
@@ -55,6 +57,9 @@ class BucketListControllerTest {
     private BucketListService bucketListService;
 
     @MockitoBean
+    private BucketListRecommendationService bucketListRecommendationService;
+
+    @MockitoBean
     private JpaMetamodelMappingContext jpaMappingContext;
 
     @MockitoBean
@@ -62,6 +67,38 @@ class BucketListControllerTest {
 
     @MockitoBean
     private CacheManager cacheManager;
+
+    @Test
+    @DisplayName("GET /api/v1/bucket-lists/recommendations 요청이 유효하면 주변 추천 목록이 반환된다")
+    void findRecommendations_whenValidCoordinates_returnsRecommendations() throws Exception {
+        // given
+        double latitude = 37.5665;
+        double longitude = 126.9780;
+        BucketListRecommendationResponse recommendation = new BucketListRecommendationResponse(
+                "126508", "12", "경복궁", 37.5796, 126.9770,
+                "https://example.com/gyeongbokgung.jpg", "서울특별시 종로구", 1459.0);
+        given(bucketListRecommendationService.findRecommendations(latitude, longitude))
+                .willReturn(List.of(recommendation));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/bucket-lists/recommendations")
+                        .with(authentication(createAuthentication(1L)))
+                        .param("latitude", String.valueOf(latitude))
+                        .param("longitude", String.valueOf(longitude)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].contentId").value("126508"))
+                .andExpect(jsonPath("$.data[0].title").value("경복궁"))
+                .andExpect(jsonPath("$.data[0].distanceMeters").value(1459.0));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/bucket-lists/recommendations 요청에 위치가 없으면 400이 반환된다")
+    void findRecommendations_whenCoordinatesMissing_returns400() throws Exception {
+        // when & then
+        mockMvc.perform(get("/api/v1/bucket-lists/recommendations")
+                        .with(authentication(createAuthentication(1L))))
+                .andExpect(status().isBadRequest());
+    }
 
     @Test
     @DisplayName("PATCH /api/v1/bucket-lists/{id}/completion 요청이 유효하면 204가 반환된다")
