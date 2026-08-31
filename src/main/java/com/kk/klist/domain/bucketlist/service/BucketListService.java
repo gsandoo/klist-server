@@ -9,6 +9,7 @@ import com.kk.klist.domain.bucketlist.dto.request.BucketListCompletionUpdateRequ
 import com.kk.klist.domain.bucketlist.dto.request.BucketListUpdateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListProgressResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
 import com.kk.klist.domain.bucketlist.repository.BucketListRepository;
 import com.kk.klist.domain.bucketlist.repository.BucketListSearchCondition;
@@ -124,6 +125,12 @@ public class BucketListService {
             return;
         }
         bucketList.cancelCompletion();
+    }
+
+    public BucketListProgressResponse getBucketListProgress(Long memberId) {
+        long totalCount = bucketListRepository.countByMemberId(memberId);
+        long completedCount = bucketListRepository.countByMemberIdAndCompletedTrue(memberId);
+        return BucketListProgressResponse.of(totalCount, completedCount);
     }
 
     private BucketList findOwnedBucketList(Long memberId, Long bucketListId) {
