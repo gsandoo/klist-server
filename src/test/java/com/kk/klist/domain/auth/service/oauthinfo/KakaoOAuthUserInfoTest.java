@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 class KakaoOAuthUserInfoTest {
 
     @Test
-    @DisplayName("카카오 응답에서 id/닉네임/프로필 이미지를 파싱한다")
-    void constructor_whenAttributesHaveProfile_parsesFields() {
+    @DisplayName("카카오 응답에서 id를 파싱하고, 닉네임/프로필 이미지는 항상 null을 반환한다")
+    void constructor_whenAttributesHaveProfile_parsesIdAndReturnsNullForProfileFields() {
         // given
         Map<String, Object> attributes = Map.of(
                 "id", 123456789L,
@@ -26,8 +26,8 @@ class KakaoOAuthUserInfoTest {
         // then
         assertThat(userInfo.getProvider()).isEqualTo(OAuthProvider.KAKAO);
         assertThat(userInfo.getOauthId()).isEqualTo("123456789");
-        assertThat(userInfo.getNickname()).isEqualTo("여행자1234");
-        assertThat(userInfo.getProfileImageUrl()).isEqualTo("https://example.com/profile.jpg");
+        assertThat(userInfo.getNickname()).isNull();
+        assertThat(userInfo.getProfileImageUrl()).isNull();
     }
 
     @Test

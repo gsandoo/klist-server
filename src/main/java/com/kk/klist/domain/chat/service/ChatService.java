@@ -166,7 +166,6 @@ public class ChatService {
                 || response.answer() == null
                 || response.answer().isBlank()
                 || response.suggestions() == null
-                || response.suggestions().isEmpty()
                 || response.suggestions().stream()
                         .anyMatch(suggestion -> suggestion == null || suggestion.isBlank())) {
             throw new ChatException(ChatErrorCode.CHATBOT_INVALID_RESPONSE);

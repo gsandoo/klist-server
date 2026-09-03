@@ -17,3 +17,6 @@ logging:
 weather:
   api:
     key: ${WEATHER_API_KEY}
+
+kakao:
+  admin-key: ${KAKAO_ADMIN_KEY}

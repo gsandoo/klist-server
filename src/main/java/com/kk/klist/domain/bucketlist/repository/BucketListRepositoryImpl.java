@@ -1,6 +1,10 @@
 package com.kk.klist.domain.bucketlist.repository;
 
+import static com.kk.klist.domain.bucketlist.domain.entity.QBucketList.bucketList;
+
 import com.kk.klist.domain.bucketlist.domain.entity.BucketList;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -8,6 +12,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +27,7 @@ public class BucketListRepositoryImpl implements BucketListRepository {
 
     private final BucketListJpaRepository bucketListJpaRepository;
     private final EntityManager entityManager;
+    private final JPAQueryFactory queryFactory;
 
     @Override
     public BucketList save(BucketList bucketList) {
@@ -36,6 +42,16 @@ public class BucketListRepositoryImpl implements BucketListRepository {
     @Override
     public void delete(BucketList bucketList) {
         bucketListJpaRepository.delete(bucketList);
+    }
+
+    @Override
+    public long countByMemberId(Long memberId) {
+        return bucketListJpaRepository.countByMemberId(memberId);
+    }
+
+    @Override
+    public long countByMemberIdAndCompletedTrue(Long memberId) {
+        return bucketListJpaRepository.countByMemberIdAndCompletedTrue(memberId);
     }
 
     @Override
@@ -72,6 +88,50 @@ public class BucketListRepositoryImpl implements BucketListRepository {
                 .select(criteriaBuilder.count(bucketList))
                 .where(createPredicates(criteriaBuilder, bucketList, condition));
         return entityManager.createQuery(countQuery).getSingleResult();
+    }
+
+    @Override
+    public long countCompletedInPeriod(Long memberId, LocalDateTime start, LocalDateTime end) {
+        Long count = queryFactory
+                .select(bucketList.count())
+                .from(bucketList)
+                .where(
+                        memberIdEq(memberId),
+                        completedIsTrue(),
+                        completedAtGoe(start),
+                        completedAtLt(end)
+                )
+                .fetchOne();
+        return count != null ? count : 0L;
+    }
+
+    @Override
+    public List<BucketList> findAllCompletedInPeriod(Long memberId, LocalDateTime start, LocalDateTime end) {
+        return queryFactory
+                .selectFrom(bucketList)
+                .where(
+                        memberIdEq(memberId),
+                        completedIsTrue(),
+                        completedAtGoe(start),
+                        completedAtLt(end)
+                )
+                .fetch();
+    }
+
+    private BooleanExpression memberIdEq(Long memberId) {
+        return bucketList.memberId.eq(memberId);
+    }
+
+    private BooleanExpression completedIsTrue() {
+        return bucketList.completed.isTrue();
+    }
+
+    private BooleanExpression completedAtGoe(LocalDateTime start) {
+        return bucketList.completedAt.goe(start);
+    }
+
+    private BooleanExpression completedAtLt(LocalDateTime end) {
+        return bucketList.completedAt.lt(end);
     }
 
     private Predicate[] createPredicates(CriteriaBuilder criteriaBuilder, Root<BucketList> bucketList,

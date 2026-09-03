@@ -9,6 +9,7 @@ import com.kk.klist.domain.bucketlist.dto.request.BucketListCompletionUpdateRequ
 import com.kk.klist.domain.bucketlist.dto.request.BucketListUpdateRequest;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListCreateResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListDetailResponse;
+import com.kk.klist.domain.bucketlist.dto.response.BucketListProgressResponse;
 import com.kk.klist.domain.bucketlist.dto.response.BucketListSummaryResponse;
 import com.kk.klist.domain.bucketlist.repository.BucketListRepository;
 import com.kk.klist.domain.bucketlist.repository.BucketListSearchCondition;
@@ -17,6 +18,9 @@ import com.kk.klist.global.response.PageResponse;
 import com.kk.klist.global.util.TimeProvider;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -100,6 +104,18 @@ public class BucketListService {
         bucketListRepository.delete(bucketList);
     }
 
+    public long countCompletedInPeriod(Long memberId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        return bucketListRepository.countCompletedInPeriod(memberId, start, end);
+    }
+
+    public List<BucketList> findAllCompletedInPeriod(Long memberId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.plusDays(1).atStartOfDay();
+        return bucketListRepository.findAllCompletedInPeriod(memberId, start, end);
+    }
+
     @Transactional
     public void updateBucketListCompletion(Long memberId, Long bucketListId,
             BucketListCompletionUpdateRequest request) {
@@ -109,6 +125,12 @@ public class BucketListService {
             return;
         }
         bucketList.cancelCompletion();
+    }
+
+    public BucketListProgressResponse getBucketListProgress(Long memberId) {
+        long totalCount = bucketListRepository.countByMemberId(memberId);
+        long completedCount = bucketListRepository.countByMemberIdAndCompletedTrue(memberId);
+        return BucketListProgressResponse.of(totalCount, completedCount);
     }
 
     private BucketList findOwnedBucketList(Long memberId, Long bucketListId) {

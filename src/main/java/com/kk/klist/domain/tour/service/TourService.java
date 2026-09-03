@@ -156,6 +156,9 @@ public class TourService {
 
     /**
      * TourAPI 서비스는 언어별로 별도 엔드포인트를 제공한다 (KorService2/EngService2/...).
+     *
+     * <p>언어별 서비스는 공공데이터포털에서 각각 활용신청해야 하며, 미신청 언어는 403 이 된다.
+     * de/fr/es 는 아직 미신청이라 매핑하지 않고 default(국문)로 응답한다.
      */
     private String service(String lang) {
         if (lang == null) {
@@ -166,6 +169,7 @@ public class TourService {
             case "ja" -> "JpnService2";
             case "zh-CN" -> "ChsService2";
             case "zh-TW" -> "ChtService2";
+            case "ru" -> "RusService2";
             default -> "KorService2";
         };
     }

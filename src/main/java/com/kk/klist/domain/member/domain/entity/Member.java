@@ -26,7 +26,7 @@ public class Member extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column
     private String nickname;
 
     @Enumerated(EnumType.STRING)
@@ -46,8 +46,14 @@ public class Member extends BaseTimeEntity {
     @Column
     private String preferredLanguage;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String profileImageUrl;
+
+    @Column(nullable = false)
+    private boolean isOnboarding = false;
+
+    @Column(nullable = false)
+    private boolean isActive = true;
 
     @Column
     private String refreshTokenId;
@@ -70,11 +76,46 @@ public class Member extends BaseTimeEntity {
                 .build();
     }
 
+    public void completeOnboarding(String nickname, String profileImageUrl, String preferredLanguage, String nationality) {
+        this.nickname = nickname;
+        this.profileImageUrl = profileImageUrl;
+        this.preferredLanguage = preferredLanguage;
+        this.nationality = nationality;
+        this.isOnboarding = true;
+    }
+
+    public void updateProfile(String nickname, String nationality) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (nationality != null) {
+            this.nationality = nationality;
+        }
+    }
+
+    public void updateProfileImage(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    public void updatePreferredLanguage(String preferredLanguage) {
+        this.preferredLanguage = preferredLanguage;
+    }
+
     public void updateRefreshToken(String tokenId) {
         this.refreshTokenId = tokenId;
     }
 
     public void clearRefreshToken() {
         this.refreshTokenId = null;
+    }
+
+    public void withdraw() {
+        this.isActive = false;
+        this.refreshTokenId = null;
+    }
+
+    public void reactivate() {
+        this.isActive = true;
+        this.isOnboarding = false;
     }
 }

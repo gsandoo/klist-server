@@ -48,7 +48,7 @@ class CustomOAuth2UserServiceTest {
         given(delegate.loadUser(userRequest)).willReturn(kakaoOAuth2User());
         Member member = MemberFixture.kakaoMemberWithOauthId("123456789");
         given(memberService.upsertMember(
-                OAuthProvider.KAKAO, "123456789", "여행자1234", "https://example.com/profile.jpg"))
+                OAuthProvider.KAKAO, "123456789", null, null))
                 .willReturn(new MemberUpsertResult(member, true));
 
         // when

@@ -1,5 +1,6 @@
 package com.kk.klist.domain.auth.service;
 
+import com.kk.klist.domain.auth.dto.request.OnboardingRequest;
 import com.kk.klist.domain.auth.dto.response.TokenResponse;
 import com.kk.klist.domain.member.domain.entity.Member;
 import com.kk.klist.domain.member.service.MemberService;
@@ -49,6 +50,17 @@ public class AuthService {
     public void logout(Long memberId) {
         Member member = memberService.getById(memberId);
         member.clearRefreshToken();
+    }
+
+    @Transactional
+    public void completeOnboarding(Long memberId, OnboardingRequest request) {
+        memberService.completeOnboarding(
+                memberId,
+                request.nickname(),
+                null,  // profileImage Base64 → 저장소 업로드 미구현, 추후 S3 연동 시 교체
+                request.preferredLanguage(),
+                request.nationality()
+        );
     }
 
     private Long extractMemberIdFromRefreshToken(String refreshToken) {
