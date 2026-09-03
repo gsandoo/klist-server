@@ -29,8 +29,10 @@ import tools.jackson.databind.JsonNode;
 public class RecommendService {
 
     // 장르별 TourAPI 검색 키워드 (큐레이션). 한 장르에 여러 키워드로 검색해 결과 합침.
+    // ⚠ TourAPI 에 실제로 등록된 키워드만 쓴다. "HYBE"/"SM 엔터테인먼트" 는 검색 결과가 0건이라
+    //   K-pop 장르가 전 지역에서 비어 보였다. 공연·이벤트 장소 위주로 교체했다.
     private static final Map<String, List<String>> KEYWORDS_BY_GENRE = Map.of(
-            "K-pop", List.of("HYBE", "SM 엔터테인먼트", "코엑스"),
+            "K-pop", List.of("코엑스", "장충체육관", "동대문디자인플라자", "케이팝"),
             "K-drama", List.of("북촌 한옥마을", "남산 서울타워", "덕수궁"),
             "K-food", List.of("광장시장", "망원시장", "익선동"),
             "K-beauty", List.of("명동", "가로수길", "성수동"));
