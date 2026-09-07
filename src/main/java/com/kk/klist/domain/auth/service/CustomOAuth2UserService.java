@@ -1,5 +1,6 @@
 package com.kk.klist.domain.auth.service;
 
+import com.kk.klist.domain.auth.service.oauthinfo.GoogleOAuthUserInfo;
 import com.kk.klist.domain.auth.service.oauthinfo.KakaoOAuthUserInfo;
 import com.kk.klist.domain.auth.service.oauthinfo.OAuthUserInfo;
 import com.kk.klist.domain.member.service.MemberService;
@@ -54,6 +55,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private OAuthUserInfo resolveUserInfo(String registrationId, Map<String, Object> attributes) {
         return switch (registrationId) {
             case "kakao" -> new KakaoOAuthUserInfo(attributes);
+            case "google" -> new GoogleOAuthUserInfo(attributes);
             default -> throw oauthError(AuthErrorCode.UNSUPPORTED_OAUTH_PROVIDER);
         };
     }
