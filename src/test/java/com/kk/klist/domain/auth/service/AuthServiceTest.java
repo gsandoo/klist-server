@@ -57,6 +57,7 @@ class AuthServiceTest {
 
         // then
         assertThat(result.accessToken()).isEqualTo("new-access-token");
+        assertThat(result.refreshToken()).isEqualTo("new-refresh-token");
         assertThat(result.expiresIn()).isEqualTo(3600L);
         assertThat(member.getRefreshTokenId()).isEqualTo("new-token-id");
     }
