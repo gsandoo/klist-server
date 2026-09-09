@@ -1,3 +1,3 @@
 package com.kk.klist.domain.auth.dto.response;
 
-public record TokenResponse(String accessToken, long expiresIn) {}
+public record TokenResponse(String accessToken, String refreshToken, long expiresIn) {}

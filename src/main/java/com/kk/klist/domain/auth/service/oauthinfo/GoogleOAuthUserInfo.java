@@ -18,7 +18,9 @@ public class GoogleOAuthUserInfo implements OAuthUserInfo {
 
     @Override
     public String getOauthId() {
-        return String.valueOf(attributes.get("sub"));
+        Object sub = attributes.get("sub");
+        if (sub == null) throw new IllegalStateException("Google 사용자 정보에 sub 필드가 없습니다.");
+        return String.valueOf(sub);
     }
 
     @Override

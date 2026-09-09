@@ -43,7 +43,7 @@ public class AuthService {
         member.updateRefreshToken(jwtTokenProvider.getTokenId(newRefreshToken));
 
         long expiresIn = jwtTokenProvider.getAccessTokenExpirationMillis() / 1000;
-        return new TokenResponse(newAccessToken, expiresIn);
+        return new TokenResponse(newAccessToken, newRefreshToken, expiresIn);
     }
 
     @Transactional

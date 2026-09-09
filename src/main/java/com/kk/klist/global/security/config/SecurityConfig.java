@@ -2,6 +2,7 @@ package com.kk.klist.global.security.config;
 
 import com.kk.klist.domain.auth.service.CustomOAuth2UserService;
 import com.kk.klist.global.security.jwt.JwtAuthenticationFilter;
+import com.kk.klist.global.security.oauth.CookieOAuth2AuthorizationRequestRepository;
 import com.kk.klist.global.security.oauth.OAuth2LoginFailureHandler;
 import com.kk.klist.global.security.oauth.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -33,6 +35,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository))
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler))
